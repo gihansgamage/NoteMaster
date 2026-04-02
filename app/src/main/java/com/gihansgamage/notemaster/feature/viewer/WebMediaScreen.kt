@@ -68,26 +68,7 @@ fun WebMediaScreen(
             },
             update = { webView ->
                 if (embedUrl != null) {
-                    webView.loadDataWithBaseURL(
-                        "https://www.youtube.com",
-                        """
-                            <html>
-                                <body style="margin:0;background:#111;">
-                                    <iframe
-                                        width="100%"
-                                        height="100%"
-                                        src="$embedUrl"
-                                        frameborder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowfullscreen>
-                                    </iframe>
-                                </body>
-                            </html>
-                        """.trimIndent(),
-                        "text/html",
-                        "utf-8",
-                        null,
-                    )
+                    webView.loadUrl(embedUrl)
                 } else {
                     webView.loadUrl(rawUrl)
                 }
