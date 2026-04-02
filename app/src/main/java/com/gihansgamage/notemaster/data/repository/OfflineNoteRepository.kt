@@ -124,7 +124,7 @@ class OfflineNoteRepository(
     }
 
     override suspend fun togglePinned(noteId: Long) {
-        database.noteDao().togglePinned(noteId = noteId, updatedAt = System.currentTimeMillis())
+        database.noteDao().togglePinned(noteId = noteId)
     }
 
     override suspend fun createSubject(name: String): SubjectEntity {

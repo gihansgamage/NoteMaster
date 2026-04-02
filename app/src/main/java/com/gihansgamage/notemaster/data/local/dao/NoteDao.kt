@@ -71,8 +71,8 @@ interface NoteDao {
     @Query("DELETE FROM notes WHERE id = :noteId")
     suspend fun deleteById(noteId: Long)
 
-    @Query("UPDATE notes SET isPinned = NOT isPinned, updatedAt = :updatedAt WHERE id = :noteId")
-    suspend fun togglePinned(noteId: Long, updatedAt: Long)
+    @Query("UPDATE notes SET isPinned = NOT isPinned WHERE id = :noteId")
+    suspend fun togglePinned(noteId: Long)
 
     @Query("DELETE FROM attachments WHERE noteId = :noteId")
     suspend fun deleteAttachmentsForNote(noteId: Long)
