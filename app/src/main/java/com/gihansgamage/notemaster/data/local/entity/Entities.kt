@@ -33,7 +33,7 @@ data class SubjectEntity(
             entity = SubjectEntity::class,
             parentColumns = ["id"],
             childColumns = ["subjectId"],
-            onDelete = ForeignKey.SET_NULL,
+            onDelete = ForeignKey.CASCADE,
         ),
     ],
     indices = [Index("subjectId"), Index("updatedAt")],

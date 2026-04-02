@@ -190,6 +190,15 @@ fun NoteMasterApp(
                                 }
                             }
                         },
+                        onDelete = {
+                            if (noteIdArg > 0) {
+                                viewModel.deleteNote(noteIdArg) {
+                                    navController.navigate(Destination.Home) {
+                                        popUpTo(Destination.Home) { inclusive = true }
+                                    }
+                                }
+                            }
+                        },
                     )
                 }
 

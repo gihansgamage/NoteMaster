@@ -20,6 +20,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import com.gihansgamage.notemaster.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BookmarkBorder
@@ -87,7 +95,8 @@ fun HomeScreen(
 ) {
     var showSubjectDialog by remember { mutableStateOf(false) }
     var subjectToRename by remember { mutableStateOf<com.gihansgamage.notemaster.data.local.entity.SubjectEntity?>(null) }
- 
+    var subjectToDelete by remember { mutableStateOf<com.gihansgamage.notemaster.data.local.entity.SubjectEntity?>(null) }
+    
     if (showSubjectDialog) {
         AddSubjectDialog(
             onDismiss = { showSubjectDialog = false },
@@ -105,6 +114,30 @@ fun HomeScreen(
             onConfirm = { newName ->
                 subjectToRename?.let { onRenameSubject(it.id, newName) }
                 subjectToRename = null
+            }
+        )
+    }
+
+    if (subjectToDelete != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { subjectToDelete = null },
+            title = { androidx.compose.material3.Text("Delete Notebook?") },
+            text = { androidx.compose.material3.Text("This will permanently delete the '${subjectToDelete?.name}' notebook and ALL its materials. This action cannot be undone.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        subjectToDelete?.let { onDeleteSubject(it.id) }
+                        subjectToDelete = null
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.MaterialTheme.colorScheme.error)
+                ) {
+                    androidx.compose.material3.Text("Delete")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { subjectToDelete = null }) {
+                    androidx.compose.material3.Text("Cancel")
+                }
             }
         )
     }
@@ -172,7 +205,7 @@ fun HomeScreen(
                     selectedSubjectId = uiState.selectedSubjectId,
                     onSelectSubject = onSelectSubject,
                     onCreateSubject = { showSubjectDialog = true },
-                    onDeleteSubject = onDeleteSubject,
+                    onDeleteSubject = { subjectToDelete = it },
                     onRenameSubject = { subjectToRename = it }
                 )
             }
@@ -274,7 +307,7 @@ private fun NotebookSection(
     selectedSubjectId: Long?,
     onSelectSubject: (Long?) -> Unit,
     onCreateSubject: () -> Unit,
-    onDeleteSubject: (Long) -> Unit,
+    onDeleteSubject: (com.gihansgamage.notemaster.data.local.entity.SubjectEntity) -> Unit,
     onRenameSubject: (com.gihansgamage.notemaster.data.local.entity.SubjectEntity) -> Unit,
 ) {
     Column(
@@ -324,7 +357,7 @@ private fun NotebookSection(
                     materialCount = notes.filter { it.subject?.id == subject.id }.sumOf { it.attachments.size },
                     selected = selectedSubjectId == subject.id,
                     onClick = { onSelectSubject(subject.id) },
-                    onDelete = { onDeleteSubject(subject.id) },
+                    onDelete = { onDeleteSubject(subject) },
                     onRename = { onRenameSubject(subject) }
                 )
             }

@@ -45,7 +45,9 @@ fun EditorScreen(
     onAddLink: (String, String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
     onSave: () -> Unit,
+    onDelete: () -> Unit,
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var showLinkDialog by remember { mutableStateOf(false) }
     var showTextDialog by remember { mutableStateOf(false) }
     var showSubjectDialog by remember { mutableStateOf(false) }
@@ -114,6 +116,15 @@ fun EditorScreen(
                     }
                     IconButton(onClick = onSave) {
                         Icon(Icons.Rounded.Save, contentDescription = "Save")
+                    }
+                    if (uiState.noteId != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = "Delete note",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
@@ -292,6 +303,30 @@ fun EditorScreen(
                 SummaryPreviewCard(summary = uiState.summaryPreview)
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Material?") },
+            text = { Text("This will permanently delete this material and all its data. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

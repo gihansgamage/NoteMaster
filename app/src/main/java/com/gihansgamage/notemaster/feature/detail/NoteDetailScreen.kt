@@ -51,6 +51,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -84,6 +87,7 @@ fun NoteDetailScreen(
     onOpenAttachment: (AttachmentDraft) -> Unit,
     getToc: (String) -> List<TocEntry>,
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val scrollState = rememberLazyListState()
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -120,7 +124,7 @@ fun NoteDetailScreen(
                                 tint = if (note.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        IconButton(onClick = onDelete) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Rounded.Delete, contentDescription = "Delete")
                         }
                     }
@@ -238,6 +242,30 @@ fun NoteDetailScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Material?") },
+            text = { Text("This will permanently delete this material. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
