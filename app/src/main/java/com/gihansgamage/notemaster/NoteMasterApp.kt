@@ -164,6 +164,7 @@ fun NoteMasterApp(
 
                     EditorScreen(
                         uiState = editorUiState,
+                        snackbarHostState = snackbarHostState,
                         onBack = { navController.popBackStack() },
                         onTitleChange = viewModel::updateTitle,
                         onBodyChange = viewModel::updateBody,

@@ -180,6 +180,9 @@ class NoteMasterViewModel(
         editorDraft.value = editorDraft.value.copy(
             attachments = editorDraft.value.attachments + attachment,
         )
+        viewModelScope.launch {
+            messages.emit("Material added successfully!")
+        }
     }
 
     fun addLink(title: String, url: String) {

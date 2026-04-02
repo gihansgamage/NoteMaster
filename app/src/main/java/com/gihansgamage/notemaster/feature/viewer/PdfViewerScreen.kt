@@ -57,7 +57,8 @@ fun PdfViewerScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val decodedUri = Uri.parse(Uri.decode(encodedUri))
+    val decodedUri = Uri.parse(encodedUri)
+    val displayTitle = title.ifBlank { "PDF viewer" }
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     val viewerState by produceState(initialValue = PdfViewerState(), encodedUri, currentPage) {
         value = withContext(Dispatchers.IO) {

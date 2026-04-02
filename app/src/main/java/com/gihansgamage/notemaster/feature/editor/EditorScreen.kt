@@ -62,6 +62,7 @@ import com.gihansgamage.notemaster.util.buildAttachmentDraft
 @Composable
 fun EditorScreen(
     uiState: EditorUiState,
+    snackbarHostState: androidx.compose.material3.SnackbarHostState,
     onBack: () -> Unit,
     onTitleChange: (String) -> Unit,
     onBodyChange: (String) -> Unit,
@@ -139,6 +140,7 @@ fun EditorScreen(
                 windowInsets = WindowInsets.statusBars,
             )
         },
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         LazyColumn(
@@ -154,17 +156,30 @@ fun EditorScreen(
                     onValueChange = onTitleChange,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Title") },
+                    placeholder = { Text("Enter a descriptive title...") },
                     shape = RoundedCornerShape(22.dp),
                     singleLine = true,
                 )
             }
 
-            item {
-                SubjectSelector(
-                    uiState = uiState,
-                    onSelectSubject = onSelectSubject,
-                    onAddSubject = { showSubjectDialog = true },
-                )
+            // Subject Selector - Only show if not pre-locked from a notebook
+            if (uiState.noteId == null && uiState.subjectId == null) {
+                item {
+                    SubjectSelector(
+                        uiState = uiState,
+                        onSelectSubject = onSelectSubject,
+                        onAddSubject = { showSubjectDialog = true },
+                    )
+                }
+            } else if (uiState.noteId != null) {
+                // Allow changing subject when editing existing note
+                item {
+                    SubjectSelector(
+                        uiState = uiState,
+                        onSelectSubject = onSelectSubject,
+                        onAddSubject = { showSubjectDialog = true },
+                    )
+                }
             }
 
             item {
@@ -179,8 +194,9 @@ fun EditorScreen(
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         Text(
-                            text = "Quick add",
+                            text = "Add material",
                             style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             item {
@@ -237,13 +253,32 @@ fun EditorScreen(
                 }
             }
 
+            // MATERIALS LIST - Moved up!
+            if (uiState.attachments.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Added materials",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                items(uiState.attachments, key = { it.localId }) { attachment ->
+                    AttachmentEditorRow(
+                        attachment = attachment,
+                        onRemove = { onRemoveAttachment(attachment.localId) },
+                    )
+                }
+            }
+
             item {
                 OutlinedTextField(
                     value = uiState.tagsText,
                     onValueChange = onTagsChange,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Hashtags") },
-                    supportingText = { Text("Use values like #biology #exam or comma-separated tags") },
+                    supportingText = { Text("e.g. #biology #exam") },
                     shape = RoundedCornerShape(22.dp),
                     singleLine = false,
                 )
@@ -255,31 +290,15 @@ fun EditorScreen(
                     onValueChange = onBodyChange,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(280.dp),
-                    label = { Text("Write your note") },
+                        .height(320.dp),
+                    label = { Text("Note content") },
+                    placeholder = { Text("Write your detailed notes here...") },
                     shape = RoundedCornerShape(24.dp),
                 )
             }
 
             item {
                 SummaryPreviewCard(summary = uiState.summaryPreview)
-            }
-
-            if (uiState.attachments.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Attachments",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-
-                items(uiState.attachments, key = { it.localId }) { attachment ->
-                    AttachmentEditorRow(
-                        attachment = attachment,
-                        onRemove = { onRemoveAttachment(attachment.localId) },
-                    )
-                }
             }
         }
     }
