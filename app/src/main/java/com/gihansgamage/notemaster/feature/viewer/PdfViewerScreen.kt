@@ -43,23 +43,33 @@ data class RenderedPdfPage(
     val pageCount: Int,
 )
 
+private data class PdfViewerState(
+    val page: RenderedPdfPage? = null,
+    val hasError: Boolean = false,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfViewerScreen(
     title: String,
     encodedUri: String,
+    onOpenExternal: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val decodedUri = Uri.parse(Uri.decode(encodedUri))
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
-    val renderedPage by produceState<RenderedPdfPage?>(initialValue = null, encodedUri, currentPage) {
+    val viewerState by produceState(initialValue = PdfViewerState(), encodedUri, currentPage) {
         value = withContext(Dispatchers.IO) {
-            renderPdfPage(context, decodedUri, currentPage)
+            val renderedPage = renderPdfPage(context, decodedUri, currentPage)
+            PdfViewerState(
+                page = renderedPage,
+                hasError = renderedPage == null,
+            )
         }
     }
 
-    val pageCount = renderedPage?.pageCount ?: 1
+    val pageCount = viewerState.page?.pageCount ?: 1
     val visiblePage = currentPage.coerceIn(0, pageCount - 1)
 
     Scaffold(
@@ -96,14 +106,22 @@ fun PdfViewerScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (renderedPage == null) {
-                CircularProgressIndicator()
-            } else {
+            if (viewerState.page != null) {
                 Image(
-                    bitmap = renderedPage!!.bitmap.asImageBitmap(),
+                    bitmap = viewerState.page.bitmap.asImageBitmap(),
                     contentDescription = "PDF page",
                     modifier = Modifier.fillMaxWidth(),
                 )
+            } else if (viewerState.hasError) {
+                Text(
+                    text = "Couldn't open this PDF in the in-app viewer.",
+                    color = MaterialTheme.colorScheme.error,
+                )
+                OutlinedButton(onClick = { onOpenExternal(decodedUri.toString()) }) {
+                    Text("Open with another app")
+                }
+            } else {
+                CircularProgressIndicator()
             }
 
             Column(
@@ -112,13 +130,13 @@ fun PdfViewerScreen(
             ) {
                 OutlinedButton(
                     onClick = { currentPage = (visiblePage - 1).coerceAtLeast(0) },
-                    enabled = visiblePage > 0,
+                    enabled = visiblePage > 0 && viewerState.page != null,
                 ) {
                     Text("Previous page")
                 }
                 Button(
                     onClick = { currentPage = (visiblePage + 1).coerceAtMost(pageCount - 1) },
-                    enabled = visiblePage < pageCount - 1,
+                    enabled = visiblePage < pageCount - 1 && viewerState.page != null,
                 ) {
                     Text("Next page")
                 }

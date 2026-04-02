@@ -173,7 +173,7 @@ class NoteMasterViewModel(
     }
 
     fun addLink(title: String, url: String) {
-        val cleanUrl = url.trim()
+        val cleanUrl = LinkClassifier.normalizeUrl(url)
         if (cleanUrl.isBlank()) return
 
         addAttachment(

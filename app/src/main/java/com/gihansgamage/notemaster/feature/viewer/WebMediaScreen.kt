@@ -32,7 +32,7 @@ fun WebMediaScreen(
     encodedUrl: String,
     onBack: () -> Unit,
 ) {
-    val rawUrl = Uri.decode(encodedUrl)
+    val rawUrl = LinkClassifier.normalizeUrl(Uri.decode(encodedUrl))
     val displayTitle = Uri.decode(title).ifBlank { "Web viewer" }
     val embedUrl = LinkClassifier.toYouTubeEmbedUrl(rawUrl)
 
