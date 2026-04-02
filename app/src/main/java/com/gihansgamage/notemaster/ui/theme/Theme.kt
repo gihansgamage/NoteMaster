@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -18,6 +19,8 @@ import androidx.core.view.WindowCompat
 private val LightColors = lightColorScheme(
     primary = IndigoPrimary,
     onPrimary = Cloud,
+    primaryContainer = IndigoPrimary, // FAB Background in Light Mode
+    onPrimaryContainer = Cloud,       // FAB Icon in Light Mode
     secondary = IndigoSecondary,
     onSecondary = Cloud,
     tertiary = Sage,
@@ -31,8 +34,16 @@ private val LightColors = lightColorScheme(
 
 private val DarkColors = darkColorScheme(
     primary = Sage,
+    onPrimary = SlateTextPrimary,
+    primaryContainer = Cloud,         // FAB Background in Dark Mode (Swapping to Light Colors)
+    onPrimaryContainer = IndigoPrimary, // FAB Icon in Dark Mode (Swapping to Dark Color)
     secondary = Clay,
+    onSecondary = Cloud,
     tertiary = Linen,
+    background = Color(0xFF0F172A),
+    surface = Color(0xFF1E293B),
+    onBackground = Color(0xFFF1F5F9),
+    onSurface = Color(0xFFF1F5F9),
 )
 
 @Composable

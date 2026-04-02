@@ -171,7 +171,11 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showSubjectDialog = true }) {
+            FloatingActionButton(
+                onClick = { showSubjectDialog = true },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Create Notebook")
             }
         },

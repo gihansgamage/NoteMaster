@@ -114,7 +114,7 @@ fun PdfViewerScreen(
                         )
                     }
                     IconButton(onClick = { showJumpDialog = true }) {
-                        Icon(Icons.Rounded.Numbers, contentDescription = "Jump to page")
+                        Icon(Icons.Rounded.FindInPage, contentDescription = "Jump to page")
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(

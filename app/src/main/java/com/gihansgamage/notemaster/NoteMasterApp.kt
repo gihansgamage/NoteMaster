@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -88,15 +89,14 @@ fun NoteMasterApp(
 
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
 
-    NoteMasterTheme(
-        darkTheme = userPreferences.isDarkMode,
-    ) {
+    if (userPreferences.isLoaded) {
+        NoteMasterTheme(
+            darkTheme = userPreferences.isDarkMode ?: isSystemInDarkTheme(),
+        ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            val startDestination = if (userPreferences.isOnboardingCompleted) Destination.Home else Destination.Welcome
-
             NavHost(
                 navController = navController,
-                startDestination = startDestination,
+                startDestination = Destination.Home,
             ) {
                 composable(Destination.Home) {
                     HomeScreen(
@@ -130,21 +130,10 @@ fun NoteMasterApp(
                     )
                 }
 
-                composable(Destination.Welcome) {
-                    com.gihansgamage.notemaster.feature.onboarding.WelcomeScreen(
-                        onComplete = { name ->
-                            viewModel.completeOnboarding(name)
-                            navController.navigate(Destination.Home) {
-                                popUpTo(Destination.Welcome) { inclusive = true }
-                            }
-                        }
-                    )
-                }
-
                 composable(Destination.Settings) {
                     com.gihansgamage.notemaster.feature.settings.SettingsScreen(
                         userName = userPreferences.userName,
-                        isDarkMode = userPreferences.isDarkMode,
+                        isDarkMode = userPreferences.isDarkMode ?: isSystemInDarkTheme(),
                         onNameChange = viewModel::updateUserName,
                         onThemeToggle = viewModel::updateDarkMode,
                         onDeleteAllData = viewModel::deleteAllData,
@@ -475,16 +464,18 @@ fun NoteMasterApp(
         }
     }
 }
+}
 
 fun getGreeting(name: String): String {
     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val prefix = when (hour) {
-        in 5..11 -> "Good morning"
-        in 12..16 -> "Good afternoon"
-        in 17..20 -> "Good evening"
-        else -> "Good night"
+        in 0..4 -> "It’s late night, ${name.ifBlank { "Smart NoteMaster" }}. Time for deep and creative thinking."
+        in 5..11 -> "Good morning, ${name.ifBlank { "Smart NoteMaster" }}. Start your day with a clear mind."
+        in 12..16 -> "Good afternoon, ${name.ifBlank { "Smart NoteMaster" }}. Keep your ideas moving forward."
+        in 17..20 -> "Good evening, ${name.ifBlank { "Smart NoteMaster" }}. Time to reflect and organize your thoughts."
+        else -> "Good night, ${name.ifBlank { "Smart NoteMaster" }}. Capture today’s final thoughts before you rest."
     }
-    return "$prefix, ${name.ifBlank { "Smart NoteMaster" }}"
+    return prefix
 }
 
 private fun shareNote(context: Context, note: NoteDetails) {
