@@ -24,7 +24,7 @@ object LinkClassifier {
         return if ("://" in cleanUrl) cleanUrl else "https://$cleanUrl"
     }
 
-    private fun extractYouTubeId(url: String): String? {
+    fun extractYouTubeId(url: String): String? {
         return runCatching {
             val uri = Uri.parse(url)
             val host = uri.host?.lowercase().orEmpty()

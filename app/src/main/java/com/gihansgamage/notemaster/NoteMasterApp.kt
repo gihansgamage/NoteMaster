@@ -53,11 +53,10 @@ private object Destination {
     const val Audio = "audio?title={title}&uri={uri}"
     const val Image = "image?title={title}&uri={uri}"
     const val Text = "text?title={title}&content={content}"
+    const val YouTube = "viewer/youtube?title={title}&url={url}"
     const val SubjectDetail = "subject_detail/{subjectId}"
     const val Welcome = "welcome"
     const val Settings = "settings"
-
-
     fun editor(noteId: Long? = null): String = "editor?noteId=${noteId ?: -1L}"
     fun detail(noteId: Long): String = "detail/$noteId"
     fun pdf(title: String, uri: String): String = "pdf?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
@@ -66,6 +65,7 @@ private object Destination {
     fun audio(title: String, uri: String): String = "audio?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
     fun image(title: String, uri: String): String = "image?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
     fun text(title: String, content: String): String = "text?title=${Uri.encode(title)}&content=${Uri.encode(content)}"
+    fun youtube(title: String, url: String): String = "viewer/youtube?title=${Uri.encode(title)}&url=${Uri.encode(url)}"
     fun subjectDetail(subjectId: Long): String = "subject_detail/$subjectId"
 }
 
@@ -231,10 +231,15 @@ fun NoteMasterApp(
                                     }
                                 }
 
-                                AttachmentType.WEB_LINK,
-                                AttachmentType.YOUTUBE -> {
+                                AttachmentType.WEB_LINK -> {
                                     attachment.linkUrl?.let { url ->
                                         navController.navigate(Destination.web(attachment.title, url))
+                                    }
+                                }
+
+                                AttachmentType.YOUTUBE -> {
+                                    attachment.linkUrl?.let { url ->
+                                        navController.navigate(Destination.youtube(attachment.title, url))
                                     }
                                 }
 
@@ -312,10 +317,14 @@ fun NoteMasterApp(
                                         navController.navigate(Destination.video(attachment.title, uri))
                                     }
                                 }
-                                AttachmentType.WEB_LINK,
-                                AttachmentType.YOUTUBE -> {
+                                AttachmentType.WEB_LINK -> {
                                     attachment.linkUrl?.let { url ->
                                         navController.navigate(Destination.web(attachment.title, url))
+                                    }
+                                }
+                                AttachmentType.YOUTUBE -> {
+                                    attachment.linkUrl?.let { url ->
+                                        navController.navigate(Destination.youtube(attachment.title, url))
                                     }
                                 }
                                 AttachmentType.AUDIO -> {
@@ -427,6 +436,20 @@ fun NoteMasterApp(
                     ),
                 ) { backStackEntry ->
                     WebMediaScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = Destination.YouTube,
+                    arguments = listOf(
+                        navArgument("title") { type = NavType.StringType },
+                        navArgument("url") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    com.gihansgamage.notemaster.feature.viewer.YouTubeViewerScreen(
                         title = backStackEntry.arguments?.getString("title").orEmpty(),
                         encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
                         onBack = { navController.popBackStack() }

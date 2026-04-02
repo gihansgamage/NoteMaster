@@ -64,7 +64,10 @@ fun PdfViewerScreen(
     }
 
     val sharedPrefs = context.getSharedPreferences("pdf_bookmarks", android.content.Context.MODE_PRIVATE)
-    var savedBookmark by remember { mutableIntStateOf(sharedPrefs.getInt(encodedUri, -1)) }
+    var savedBookmarks by remember { 
+        mutableStateOf(sharedPrefs.getStringSet(encodedUri, emptySet())?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()) 
+    }
+    var showBookmarksDialog by remember { mutableStateOf(false) }
 
     // PDF Info State (Page Count)
     val pageCount by produceState(initialValue = 0) {
@@ -88,29 +91,30 @@ fun PdfViewerScreen(
                     }
                 },
                 actions = {
-                    if (savedBookmark != -1) {
-                        IconButton(onClick = { 
-                            coroutineScope.launch { lazyListState.scrollToItem(savedBookmark - 1) } 
-                        }) {
-                            Icon(Icons.Rounded.Bookmark, contentDescription = "Go to bookmark")
+                    val isCurrentPageBookmarked = savedBookmarks.contains(currentPage)
+
+                    if (savedBookmarks.isNotEmpty()) {
+                        IconButton(onClick = { showBookmarksDialog = true }) {
+                            Icon(Icons.Rounded.Bookmarks, contentDescription = "View all bookmarks")
                         }
                     }
+
                     IconButton(onClick = {
-                        if (savedBookmark == currentPage) {
-                            sharedPrefs.edit().remove(encodedUri).apply()
-                            savedBookmark = -1
+                        val newBookmarks = if (isCurrentPageBookmarked) {
+                            savedBookmarks - currentPage
                         } else {
-                            sharedPrefs.edit().putInt(encodedUri, currentPage).apply()
-                            savedBookmark = currentPage
+                            savedBookmarks + currentPage
                         }
+                        sharedPrefs.edit().putStringSet(encodedUri, newBookmarks.map { it.toString() }.toSet()).apply()
+                        savedBookmarks = newBookmarks
                     }) {
                         Icon(
-                            if (savedBookmark == currentPage) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            contentDescription = "Bookmark this page"
+                            if (isCurrentPageBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            contentDescription = "Toggle bookmark for this page"
                         )
                     }
                     IconButton(onClick = { showJumpDialog = true }) {
-                        Icon(Icons.Rounded.Search, contentDescription = "Jump to page")
+                        Icon(Icons.Rounded.Numbers, contentDescription = "Jump to page")
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
@@ -155,7 +159,7 @@ fun PdfViewerScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = if (savedBookmark == currentPage) "⭐ $currentPage / $pageCount" else "$currentPage / $pageCount",
+                        text = if (savedBookmarks.contains(currentPage)) "⭐ $currentPage / $pageCount" else "$currentPage / $pageCount",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -215,6 +219,42 @@ fun PdfViewerScreen(
             dismissButton = {
                 TextButton(onClick = { showJumpDialog = false }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showBookmarksDialog) {
+        AlertDialog(
+            onDismissRequest = { showBookmarksDialog = false },
+            title = { Text("Saved Bookmarks") },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(savedBookmarks.sorted()) { pageNum ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    coroutineScope.launch { lazyListState.scrollToItem(pageNum - 1) }
+                                    showBookmarksDialog = false
+                                },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Rounded.Bookmark, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(16.dp))
+                                Text("Page $pageNum", style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showBookmarksDialog = false }) {
+                    Text("Close")
                 }
             }
         )
