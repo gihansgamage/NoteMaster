@@ -1,0 +1,436 @@
+package com.gihansgamage.notemaster.feature.home
+
+import android.graphics.Color.parseColor
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.PlayCircleOutline
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.gihansgamage.notemaster.data.local.entity.AttachmentType
+import com.gihansgamage.notemaster.data.model.NoteDetails
+import com.gihansgamage.notemaster.ui.HomeUiState
+import com.gihansgamage.notemaster.util.formatDateTime
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    uiState: HomeUiState,
+    onSearchChange: (String) -> Unit,
+    onSelectSubject: (Long?) -> Unit,
+    onCreateNote: () -> Unit,
+    onOpenNote: (Long) -> Unit,
+    onEditNote: (Long) -> Unit,
+    onTogglePinned: (Long) -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    Column {
+                        Text("Note Master")
+                        Text(
+                            text = "Organize class notes, files, and summaries in one calm space",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
+                windowInsets = WindowInsets.statusBars,
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onCreateNote) {
+                Icon(Icons.Rounded.Add, contentDescription = "Create note")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentPadding = PaddingValues(bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                HeroSection(
+                    noteCount = uiState.notes.size,
+                    subjectCount = uiState.subjects.size,
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = onSearchChange,
+                    label = { Text("Search notes, tags, or summaries") },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    singleLine = true,
+                    shape = RoundedCornerShape(20.dp),
+                )
+            }
+
+            item {
+                SubjectFilterRow(
+                    selectedSubjectId = uiState.selectedSubjectId,
+                    onSelectSubject = onSelectSubject,
+                    subjects = uiState.subjects.map { it.id to it.name },
+                )
+            }
+
+            if (uiState.notes.isEmpty()) {
+                item {
+                    EmptyNotesCard(modifier = Modifier.padding(horizontal = 20.dp))
+                }
+            } else {
+                items(uiState.notes, key = { it.id }) { note ->
+                    NoteCard(
+                        note = note,
+                        onOpen = { onOpenNote(note.id) },
+                        onEdit = { onEditNote(note.id) },
+                        onTogglePinned = { onTogglePinned(note.id) },
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroSection(
+    noteCount: Int,
+    subjectCount: Int,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "A quieter way to study and store ideas",
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Text(
+                text = "Subjects, hashtags, PDFs, links, images, and audio all stay attached to the same note.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatPill(label = "$noteCount notes")
+                StatPill(label = "$subjectCount subjects")
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatPill(label: String) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+@Composable
+private fun SubjectFilterRow(
+    selectedSubjectId: Long?,
+    onSelectSubject: (Long?) -> Unit,
+    subjects: List<Pair<Long, String>>,
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            SubjectPill(
+                title = "All",
+                selected = selectedSubjectId == null,
+                onClick = { onSelectSubject(null) },
+            )
+        }
+        items(subjects, key = { it.first }) { (id, name) ->
+            SubjectPill(
+                title = name,
+                selected = selectedSubjectId == id,
+                onClick = { onSelectSubject(id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubjectPill(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            text = title,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+@Composable
+private fun NoteCard(
+    note: NoteDetails,
+    onOpen: () -> Unit,
+    onEdit: () -> Unit,
+    onTogglePinned: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOpen)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(note.subject?.accentColorHex.toColorOrFallback()),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = attachmentLeadIcon(note),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = note.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = note.subject?.name ?: "No subject",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Row {
+                    IconButton(onClick = onTogglePinned) {
+                        Icon(
+                            imageVector = Icons.Rounded.PushPin,
+                            contentDescription = "Pin note",
+                            tint = if (note.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Rounded.Edit, contentDescription = "Edit note")
+                    }
+                }
+            }
+
+            if (note.summary.isNotBlank()) {
+                Text(
+                    text = note.summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (note.tagNames.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(note.tagNames.take(5), key = { it }) { tag ->
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
+                        ) {
+                            Text(
+                                text = "#$tag",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AttachmentSummaryRow(note = note)
+                Text(
+                    text = formatDateTime(note.updatedAt),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentSummaryRow(note: NoteDetails) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (note.attachments.isEmpty()) {
+            Icon(
+                imageVector = Icons.Rounded.BookmarkBorder,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "Text note",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            note.attachments.take(3).forEach { attachment ->
+                Icon(
+                    imageVector = when (attachment.type) {
+                        AttachmentType.PDF -> Icons.Rounded.PictureAsPdf
+                        AttachmentType.YOUTUBE -> Icons.Rounded.PlayCircleOutline
+                        else -> Icons.Rounded.Description
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = "${note.attachments.size} attachment${if (note.attachments.size > 1) "s" else ""}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyNotesCard(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "No notes yet",
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                text = "Tap the + button to create your first subject-based note with files, hashtags, and links.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun attachmentLeadIcon(note: NoteDetails) = when {
+    note.attachments.any { it.type == AttachmentType.PDF } -> Icons.Rounded.PictureAsPdf
+    note.attachments.any { it.type == AttachmentType.YOUTUBE } -> Icons.Rounded.PlayCircleOutline
+    else -> Icons.Rounded.Description
+}
+
+private fun String?.toColorOrFallback(): Color {
+    return runCatching {
+        Color(parseColor(this ?: "#EAE6DE"))
+    }.getOrDefault(Color(0xFFEAE6DE))
+}
