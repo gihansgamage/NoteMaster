@@ -521,7 +521,6 @@ private fun AddTextDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit,
 ) {
-    var title by remember { mutableStateOf("") }
     var textValue by remember { mutableStateOf(TextFieldValue("")) }
 
     AlertDialog(
@@ -529,14 +528,6 @@ private fun AddTextDialog(
         title = { Text("Add Text Material") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-                
                 FormattingToolbar(
                     textValue = textValue,
                     onValueChange = { textValue = it }
@@ -556,8 +547,9 @@ private fun AddTextDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (title.isNotBlank() || textValue.text.isNotBlank()) {
-                        onConfirm(title, textValue.text)
+                    if (textValue.text.isNotBlank()) {
+                        val derivedTitle = textValue.text.lines().firstOrNull { it.isNotBlank() }?.take(40) ?: ""
+                        onConfirm(derivedTitle, textValue.text)
                     }
                 },
             ) {
