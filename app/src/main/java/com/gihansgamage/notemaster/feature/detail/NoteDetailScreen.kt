@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.Delete
@@ -114,8 +115,8 @@ fun NoteDetailScreen(
                         }
                         IconButton(onClick = onTogglePinned) {
                             Icon(
-                                imageVector = Icons.Rounded.PushPin,
-                                contentDescription = "Pin",
+                                imageVector = if (note.isPinned) Icons.Rounded.PushPin else Icons.Outlined.PushPin,
+                                contentDescription = if (note.isPinned) "Unpin note" else "Pin note",
                                 tint = if (note.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -105,8 +107,8 @@ fun EditorScreen(
                 actions = {
                     IconButton(onClick = onTogglePinned) {
                         Icon(
-                            imageVector = Icons.Rounded.PushPin,
-                            contentDescription = "Pin note",
+                            imageVector = if (uiState.isPinned) Icons.Rounded.PushPin else Icons.Outlined.PushPin,
+                            contentDescription = if (uiState.isPinned) "Unpin note" else "Pin note",
                             tint = if (uiState.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -144,15 +146,6 @@ fun EditorScreen(
 
             // Subject Selector - Only show if not pre-locked from a notebook
             if (uiState.noteId == null && uiState.subjectId == null) {
-                item {
-                    SubjectSelector(
-                        uiState = uiState,
-                        onSelectSubject = onSelectSubject,
-                        onAddSubject = { showSubjectDialog = true },
-                    )
-                }
-            } else if (uiState.noteId != null) {
-                // Allow changing subject when editing existing note
                 item {
                     SubjectSelector(
                         uiState = uiState,

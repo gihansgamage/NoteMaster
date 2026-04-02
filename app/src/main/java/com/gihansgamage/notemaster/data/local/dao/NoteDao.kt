@@ -44,7 +44,7 @@ data class NoteWithRelations(
 @Dao
 interface NoteDao {
     @Transaction
-    @Query("SELECT * FROM notes ORDER BY isPinned DESC, updatedAt DESC")
+    @Query("SELECT * FROM notes ORDER BY updatedAt DESC")
     fun observeAll(): Flow<List<NoteWithRelations>>
 
     @Transaction
@@ -52,7 +52,7 @@ interface NoteDao {
     fun observeById(noteId: Long): Flow<NoteWithRelations?>
 
     @Transaction
-    @Query("SELECT * FROM notes WHERE subjectId = :subjectId ORDER BY isPinned DESC, updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE subjectId = :subjectId ORDER BY updatedAt DESC")
     fun observeBySubject(subjectId: Long): Flow<List<NoteWithRelations>>
 
     @Transaction

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.PlayCircleOutline
 import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
@@ -176,6 +177,8 @@ fun HomeScreen(
                 )
             }
 
+            val pinnedNotes = uiState.notes.filter { it.isPinned }
+            
             item {
                 HeroSection(
                     noteCount = uiState.notes.size,
@@ -183,12 +186,25 @@ fun HomeScreen(
                 )
             }
 
-            if (uiState.notes.isEmpty()) {
+            item {
+                Text(
+                    text = "Pinned Materials",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+            }
+
+            if (pinnedNotes.isEmpty()) {
                 item {
-                    EmptyNotesCard(modifier = Modifier.padding(horizontal = 20.dp))
+                    val hasUnpinnedNotes = uiState.notes.isNotEmpty()
+                    EmptyNotesCard(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        hasUnpinnedNotes = hasUnpinnedNotes
+                    )
                 }
             } else {
-                items(uiState.notes, key = { it.id }) { note ->
+                items(pinnedNotes, key = { it.id }) { note ->
                     NoteCard(
                         note = note,
                         onOpen = { onOpenNote(note.id) },
@@ -482,8 +498,8 @@ private fun NoteCard(
                 Row {
                     IconButton(onClick = onTogglePinned) {
                         Icon(
-                            imageVector = Icons.Rounded.PushPin,
-                            contentDescription = "Pin note",
+                            imageVector = if (note.isPinned) Icons.Rounded.PushPin else Icons.Outlined.PushPin,
+                            contentDescription = if (note.isPinned) "Unpin note" else "Pin note",
                             tint = if (note.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -574,7 +590,10 @@ private fun AttachmentSummaryRow(note: NoteDetails) {
 }
 
 @Composable
-private fun EmptyNotesCard(modifier: Modifier = Modifier) {
+private fun EmptyNotesCard(
+    modifier: Modifier = Modifier,
+    hasUnpinnedNotes: Boolean = false
+) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
@@ -587,11 +606,11 @@ private fun EmptyNotesCard(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "No notes yet",
+                text = if (hasUnpinnedNotes) "No pinned materials" else "No notes yet",
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                text = "Tap the + button to create your first subject-based note with files, hashtags, and links.",
+                text = if (hasUnpinnedNotes) "Pin your most important materials to see them here on your Home feed." else "Tap the + button to create your first subject-based note with files, hashtags, and links.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
