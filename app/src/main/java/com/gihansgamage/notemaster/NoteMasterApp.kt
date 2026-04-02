@@ -188,6 +188,7 @@ fun NoteMasterApp(
                 PdfViewerScreen(
                     title = backStackEntry.arguments?.getString("title").orEmpty(),
                     encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
+                    onOpenExternal = { rawUri -> openExternally(context, rawUri) },
                     onBack = { navController.popBackStack() },
                 )
             }

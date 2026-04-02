@@ -5,7 +5,7 @@ import com.gihansgamage.notemaster.data.local.entity.AttachmentType
 
 object LinkClassifier {
     fun typeFor(url: String): AttachmentType {
-        return if (extractYouTubeId(url) != null) {
+        return if (extractYouTubeId(normalizeUrl(url)) != null) {
             AttachmentType.YOUTUBE
         } else {
             AttachmentType.WEB_LINK
@@ -13,23 +13,28 @@ object LinkClassifier {
     }
 
     fun toYouTubeEmbedUrl(url: String): String? {
-        return extractYouTubeId(url)?.let { videoId ->
+        return extractYouTubeId(normalizeUrl(url))?.let { videoId ->
             "https://www.youtube.com/embed/$videoId"
         }
+    }
+
+    fun normalizeUrl(url: String): String {
+        val cleanUrl = url.trim()
+        if (cleanUrl.isBlank()) return cleanUrl
+        return if ("://" in cleanUrl) cleanUrl else "https://$cleanUrl"
     }
 
     private fun extractYouTubeId(url: String): String? {
         return runCatching {
             val uri = Uri.parse(url)
+            val host = uri.host?.lowercase().orEmpty()
             when {
-                uri.host?.contains("youtu.be") == true -> uri.lastPathSegment
-                uri.host?.contains("youtube.com") == true -> uri.getQueryParameter("v")
-                uri.host?.contains("youtube.com") == true && uri.path?.contains("/shorts/") == true -> {
-                    uri.pathSegments.lastOrNull()
-                }
-
+                host.contains("youtu.be") -> uri.pathSegments.firstOrNull()
+                host.contains("youtube.com") && uri.pathSegments.firstOrNull() == "shorts" -> uri.pathSegments.getOrNull(1)
+                host.contains("youtube.com") && uri.pathSegments.firstOrNull() == "embed" -> uri.pathSegments.getOrNull(1)
+                host.contains("youtube.com") -> uri.getQueryParameter("v")
                 else -> null
             }
-        }.getOrNull()
+        }.getOrNull()?.takeIf { it.isNotBlank() }
     }
 }
