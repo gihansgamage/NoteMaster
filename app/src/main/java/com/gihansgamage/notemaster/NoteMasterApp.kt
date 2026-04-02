@@ -29,9 +29,11 @@ import com.gihansgamage.notemaster.feature.detail.NoteDetailScreen
 import com.gihansgamage.notemaster.feature.editor.EditorScreen
 import com.gihansgamage.notemaster.feature.home.HomeScreen
 import com.gihansgamage.notemaster.feature.viewer.PdfViewerScreen
+import com.gihansgamage.notemaster.feature.viewer.VideoViewerScreen
 import com.gihansgamage.notemaster.feature.viewer.WebMediaScreen
 import com.gihansgamage.notemaster.ui.AppViewModelProvider
 import com.gihansgamage.notemaster.ui.NoteMasterViewModel
+import com.gihansgamage.notemaster.ui.theme.NoteMasterTheme
 import kotlinx.coroutines.flow.collectLatest
 
 private object Destination {
@@ -39,11 +41,16 @@ private object Destination {
     const val Editor = "editor?noteId={noteId}"
     const val Detail = "detail/{noteId}"
     const val Pdf = "pdf?title={title}&uri={uri}"
+    const val Video = "video?title={title}&uri={uri}"
     const val Web = "web?title={title}&url={url}"
+    const val Welcome = "welcome"
+    const val Settings = "settings"
+
 
     fun editor(noteId: Long? = null): String = "editor?noteId=${noteId ?: -1L}"
     fun detail(noteId: Long): String = "detail/$noteId"
     fun pdf(title: String, uri: String): String = "pdf?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
+    fun video(title: String, uri: String): String = "video?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
     fun web(title: String, url: String): String = "web?title=${Uri.encode(title)}&url=${Uri.encode(url)}"
 }
 
@@ -63,160 +70,219 @@ fun NoteMasterApp(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        NavHost(
-            navController = navController,
-            startDestination = Destination.Home,
-        ) {
-            composable(Destination.Home) {
-                HomeScreen(
-                    uiState = homeUiState,
-                    onSearchChange = viewModel::updateSearchQuery,
-                    onSelectSubject = viewModel::selectSubjectFilter,
-                    onCreateNote = {
-                        viewModel.startNewNote()
-                        navController.navigate(Destination.editor())
-                    },
-                    onOpenNote = { noteId ->
-                        navController.navigate(Destination.detail(noteId))
-                    },
-                    onEditNote = { noteId ->
-                        navController.navigate(Destination.editor(noteId))
-                    },
-                    onTogglePinned = viewModel::togglePinned,
-                )
-            }
+    val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
 
-            composable(
-                route = Destination.Editor,
-                arguments = listOf(
-                    navArgument("noteId") {
-                        type = NavType.LongType
-                        defaultValue = -1L
-                    },
-                ),
-            ) { backStackEntry ->
-                val noteIdArg = backStackEntry.arguments?.getLong("noteId") ?: -1L
+    NoteMasterTheme(
+        darkTheme = userPreferences.isDarkMode,
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            val startDestination = if (userPreferences.isOnboardingCompleted) Destination.Home else Destination.Welcome
 
-                LaunchedEffect(noteIdArg) {
-                    if (noteIdArg > 0L && editorUiState.noteId != noteIdArg) {
-                        viewModel.loadNoteIntoEditor(noteIdArg)
-                    }
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+            ) {
+                composable(Destination.Home) {
+                    HomeScreen(
+                        uiState = homeUiState,
+                        onSearchChange = viewModel::updateSearchQuery,
+                        onSelectSubject = viewModel::selectSubjectFilter,
+                        userName = userPreferences.userName,
+                        onCreateNote = {
+                            viewModel.startNewNote()
+                            navController.navigate(Destination.editor())
+                        },
+                        onOpenNote = { noteId ->
+                            navController.navigate(Destination.detail(noteId))
+                        },
+                        onEditNote = { noteId ->
+                            navController.navigate(Destination.editor(noteId))
+                        },
+                        onTogglePinned = viewModel::togglePinned,
+                        onOpenSettings = {
+                            navController.navigate(Destination.Settings)
+                        },
+                        onCreateSubject = viewModel::createSubject
+                    )
                 }
 
-                EditorScreen(
-                    uiState = editorUiState,
-                    onBack = { navController.popBackStack() },
-                    onTitleChange = viewModel::updateTitle,
-                    onBodyChange = viewModel::updateBody,
-                    onTagsChange = viewModel::updateTags,
-                    onSelectSubject = viewModel::selectSubject,
-                    onCreateSubject = viewModel::createSubject,
-                    onTogglePinned = viewModel::togglePinnedInEditor,
-                    onAddAttachment = viewModel::addAttachment,
-                    onAddLink = viewModel::addLink,
-                    onRemoveAttachment = viewModel::removeAttachment,
-                    onSave = {
-                        viewModel.saveCurrentNote { savedId ->
-                            navController.navigate(Destination.detail(savedId)) {
-                                popUpTo(Destination.Home)
-                            }
-                        }
-                    },
-                )
-            }
-
-            composable(
-                route = Destination.Detail,
-                arguments = listOf(
-                    navArgument("noteId") { type = NavType.LongType },
-                ),
-            ) { backStackEntry ->
-                val noteId = backStackEntry.arguments?.getLong("noteId") ?: return@composable
-                val note by viewModel.noteDetails(noteId).collectAsStateWithLifecycle(initialValue = null)
-
-                NoteDetailScreen(
-                    note = note,
-                    onBack = { navController.popBackStack() },
-                    onEdit = { navController.navigate(Destination.editor(noteId)) },
-                    onDelete = {
-                        viewModel.deleteNote(noteId) {
+                composable(Destination.Welcome) {
+                    com.gihansgamage.notemaster.feature.onboarding.WelcomeScreen(
+                        onComplete = { name ->
+                            viewModel.completeOnboarding(name)
                             navController.navigate(Destination.Home) {
-                                popUpTo(Destination.Home) { inclusive = true }
+                                popUpTo(Destination.Welcome) { inclusive = true }
                             }
                         }
-                    },
-                    onTogglePinned = { viewModel.togglePinned(noteId) },
-                    onShare = { currentNote ->
-                        shareNote(context, currentNote)
-                    },
-                    onOpenAttachment = { attachment ->
-                        when (attachment.type) {
-                            AttachmentType.PDF -> {
-                                attachment.uri?.let { uri ->
-                                    navController.navigate(Destination.pdf(attachment.title, uri))
-                                }
-                            }
+                    )
+                }
 
-                            AttachmentType.WEB_LINK,
-                            AttachmentType.YOUTUBE -> {
-                                attachment.linkUrl?.let { url ->
-                                    navController.navigate(Destination.web(attachment.title, url))
-                                }
-                            }
+                composable(Destination.Settings) {
+                    com.gihansgamage.notemaster.feature.settings.SettingsScreen(
+                        userName = userPreferences.userName,
+                        isDarkMode = userPreferences.isDarkMode,
+                        onNameChange = viewModel::updateUserName,
+                        onThemeToggle = viewModel::updateDarkMode,
+                        onDeleteAllData = viewModel::deleteAllData,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
 
-                            AttachmentType.DOCUMENT -> {
-                                attachment.uri?.let { openExternally(context, it) }
-                            }
+                composable(
+                    route = Destination.Editor,
+                    arguments = listOf(
+                        navArgument("noteId") {
+                            type = NavType.LongType
+                            defaultValue = -1L
+                        },
+                    ),
+                ) { backStackEntry ->
+                    val noteIdArg = backStackEntry.arguments?.getLong("noteId") ?: -1L
 
-                            else -> Unit
+                    LaunchedEffect(noteIdArg) {
+                        if (noteIdArg > 0L && editorUiState.noteId != noteIdArg) {
+                            viewModel.loadNoteIntoEditor(noteIdArg)
                         }
-                    },
-                )
+                    }
+
+                    EditorScreen(
+                        uiState = editorUiState,
+                        onBack = { navController.popBackStack() },
+                        onTitleChange = viewModel::updateTitle,
+                        onBodyChange = viewModel::updateBody,
+                        onTagsChange = viewModel::updateTags,
+                        onSelectSubject = viewModel::selectSubject,
+                        onCreateSubject = viewModel::createSubject,
+                        onTogglePinned = viewModel::togglePinnedInEditor,
+                        onAddAttachment = viewModel::addAttachment,
+                        onAddLink = viewModel::addLink,
+                        onRemoveAttachment = viewModel::removeAttachment,
+                        onSave = {
+                            viewModel.saveCurrentNote { savedId ->
+                                navController.navigate(Destination.detail(savedId)) {
+                                    popUpTo(Destination.Home)
+                                }
+                            }
+                        },
+                    )
+                }
+
+                composable(
+                    route = Destination.Detail,
+                    arguments = listOf(
+                        navArgument("noteId") { type = NavType.LongType },
+                    ),
+                ) { backStackEntry ->
+                    val noteId = backStackEntry.arguments?.getLong("noteId") ?: return@composable
+                    val note by viewModel.noteDetails(noteId).collectAsStateWithLifecycle(initialValue = null)
+
+                    NoteDetailScreen(
+                        note = note,
+                        onBack = { navController.popBackStack() },
+                        onEdit = { navController.navigate(Destination.editor(noteId)) },
+                        onDelete = {
+                            viewModel.deleteNote(noteId) {
+                                navController.navigate(Destination.Home) {
+                                    popUpTo(Destination.Home) { inclusive = true }
+                                }
+                            }
+                        },
+                        onTogglePinned = { viewModel.togglePinned(noteId) },
+                        onShare = { currentNote ->
+                            shareNote(context, currentNote)
+                        },
+                        onOpenAttachment = { attachment ->
+                            when (attachment.type) {
+                                AttachmentType.PDF -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.pdf(attachment.title, uri))
+                                    }
+                                }
+
+                                AttachmentType.VIDEO -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.video(attachment.title, uri))
+                                    }
+                                }
+
+                                AttachmentType.WEB_LINK,
+                                AttachmentType.YOUTUBE -> {
+                                    attachment.linkUrl?.let { url ->
+                                        navController.navigate(Destination.web(attachment.title, url))
+                                    }
+                                }
+
+                                AttachmentType.DOCUMENT -> {
+                                    attachment.uri?.let { openExternally(context, it) }
+                                }
+
+                                else -> Unit
+                            }
+                        },
+                        getToc = viewModel::getToc
+                    )
+                }
+
+                composable(
+                    route = Destination.Pdf,
+                    arguments = listOf(
+                        navArgument("title") {
+                            type = NavType.StringType
+                            defaultValue = "PDF"
+                        },
+                        navArgument("uri") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    PdfViewerScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
+                        onOpenExternal = { rawUri -> openExternally(context, rawUri) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+
+                composable(
+                    route = Destination.Web,
+                    arguments = listOf(
+                        navArgument("title") {
+                            type = NavType.StringType
+                            defaultValue = "Link"
+                        },
+                        navArgument("url") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    WebMediaScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+
+                composable(
+                    route = Destination.Video,
+                    arguments = listOf(
+                        navArgument("title") {
+                            type = NavType.StringType
+                            defaultValue = "Video"
+                        },
+                        navArgument("uri") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    VideoViewerScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
 
-            composable(
-                route = Destination.Pdf,
-                arguments = listOf(
-                    navArgument("title") {
-                        type = NavType.StringType
-                        defaultValue = "PDF"
-                    },
-                    navArgument("uri") { type = NavType.StringType },
-                ),
-            ) { backStackEntry ->
-                PdfViewerScreen(
-                    title = backStackEntry.arguments?.getString("title").orEmpty(),
-                    encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
-                    onOpenExternal = { rawUri -> openExternally(context, rawUri) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-
-            composable(
-                route = Destination.Web,
-                arguments = listOf(
-                    navArgument("title") {
-                        type = NavType.StringType
-                        defaultValue = "Link"
-                    },
-                    navArgument("url") { type = NavType.StringType },
-                ),
-            ) { backStackEntry ->
-                WebMediaScreen(
-                    title = backStackEntry.arguments?.getString("title").orEmpty(),
-                    encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
-                    onBack = { navController.popBackStack() },
-                )
-            }
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+            )
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
-        )
     }
 }
 

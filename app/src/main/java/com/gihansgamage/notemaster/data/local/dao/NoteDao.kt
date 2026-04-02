@@ -84,4 +84,7 @@ interface NoteDao {
 
     @Query("SELECT COUNT(*) FROM notes")
     suspend fun count(): Int
+
+    @Query("DELETE FROM notes")
+    suspend fun deleteAll()
 }

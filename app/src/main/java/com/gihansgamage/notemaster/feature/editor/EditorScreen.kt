@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.PlayCircleOutline
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Subject
@@ -79,6 +80,7 @@ fun EditorScreen(
     val pdfPicker = rememberAttachmentPicker(fallbackType = AttachmentType.PDF, onAddAttachment = onAddAttachment)
     val imagePicker = rememberAttachmentPicker(fallbackType = AttachmentType.IMAGE, onAddAttachment = onAddAttachment)
     val audioPicker = rememberAttachmentPicker(fallbackType = AttachmentType.AUDIO, onAddAttachment = onAddAttachment)
+    val videoPicker = rememberAttachmentPicker(fallbackType = AttachmentType.VIDEO, onAddAttachment = onAddAttachment)
     val documentPicker = rememberAttachmentPicker(fallbackType = AttachmentType.DOCUMENT, onAddAttachment = onAddAttachment)
 
     if (showLinkDialog) {
@@ -200,6 +202,13 @@ fun EditorScreen(
                                     onClick = { audioPicker.launch(arrayOf("audio/*")) },
                                     label = { Text("Audio") },
                                     leadingIcon = { Icon(Icons.Rounded.Audiotrack, contentDescription = null) },
+                                )
+                            }
+                            item {
+                                AssistChip(
+                                    onClick = { videoPicker.launch(arrayOf("video/*")) },
+                                    label = { Text("Video") },
+                                    leadingIcon = { Icon(Icons.Rounded.PlayCircleOutline, contentDescription = null) },
                                 )
                             }
                             item {
@@ -402,6 +411,7 @@ private fun AttachmentEditorRow(
                     text = when (attachment.type) {
                         AttachmentType.PDF -> "PDF file"
                         AttachmentType.IMAGE -> "Image"
+                        AttachmentType.VIDEO -> "Video"
                         AttachmentType.AUDIO -> "Audio clip"
                         AttachmentType.DOCUMENT -> "Document"
                         AttachmentType.WEB_LINK -> "Web link"

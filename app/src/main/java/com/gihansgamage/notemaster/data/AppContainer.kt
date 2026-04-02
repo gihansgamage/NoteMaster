@@ -4,6 +4,7 @@ import android.content.Context
 import com.gihansgamage.notemaster.data.local.NoteMasterDatabase
 import com.gihansgamage.notemaster.data.repository.NoteRepository
 import com.gihansgamage.notemaster.data.repository.OfflineNoteRepository
+import com.gihansgamage.notemaster.data.repository.UserPreferencesRepository
 import com.gihansgamage.notemaster.domain.summary.HeuristicNoteSummarizer
 import com.gihansgamage.notemaster.domain.summary.NoteSummarizer
 
@@ -21,5 +22,9 @@ class AppContainer(context: Context) {
             database = database,
             summarizer = noteSummarizer,
         )
+    }
+
+    val userPreferencesRepository: UserPreferencesRepository by lazy {
+        UserPreferencesRepository(context)
     }
 }

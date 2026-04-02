@@ -8,7 +8,9 @@ import com.gihansgamage.notemaster.data.model.AttachmentDraft
 import com.gihansgamage.notemaster.data.model.EditableNote
 import com.gihansgamage.notemaster.data.model.NoteDetails
 import com.gihansgamage.notemaster.data.repository.NoteRepository
+import com.gihansgamage.notemaster.data.repository.UserPreferencesRepository
 import com.gihansgamage.notemaster.domain.summary.NoteSummarizer
+import com.gihansgamage.notemaster.domain.toc.TocService
 import com.gihansgamage.notemaster.util.LinkClassifier
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,8 +44,16 @@ data class EditorUiState(
 
 class NoteMasterViewModel(
     private val repository: NoteRepository,
+    private val preferencesRepository: UserPreferencesRepository,
     private val summarizer: NoteSummarizer,
+    private val tocService: TocService = TocService(),
 ) : ViewModel() {
+
+    val userPreferences = preferencesRepository.userPreferencesFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = com.gihansgamage.notemaster.data.repository.UserPreferences()
+    )
 
     private val selectedSubjectId = MutableStateFlow<Long?>(null)
     private val searchQuery = MutableStateFlow("")
@@ -229,7 +239,35 @@ class NoteMasterViewModel(
         }
     }
 
-    fun noteDetails(noteId: Long): Flow<NoteDetails?> = repository.observeNote(noteId)
+    fun updateUserName(name: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateUserName(name)
+        }
+    }
+
+    fun updateDarkMode(isDark: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateDarkMode(isDark)
+        }
+    }
+
+    fun completeOnboarding(name: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateUserName(name)
+            preferencesRepository.setOnboardingCompleted(true)
+        }
+    }
+
+    fun deleteAllData() {
+        viewModelScope.launch {
+            repository.deleteAllData()
+            messages.emit("All data deleted.")
+        }
+    }
+
+    fun noteDetails(id: Long): Flow<NoteDetails?> = repository.observeNote(id)
+
+    fun getToc(body: String) = tocService.extractHeaders(body)
 
     private fun buildSearchableText(note: NoteDetails): String {
         return listOf(

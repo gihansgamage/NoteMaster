@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -61,9 +63,10 @@ import androidx.compose.ui.unit.dp
 import com.gihansgamage.notemaster.data.local.entity.AttachmentType
 import com.gihansgamage.notemaster.data.model.AttachmentDraft
 import com.gihansgamage.notemaster.data.model.NoteDetails
-import com.gihansgamage.notemaster.util.TableOfContentsParser
+import com.gihansgamage.notemaster.domain.toc.TocEntry
 import com.gihansgamage.notemaster.util.formatDateTime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +79,11 @@ fun NoteDetailScreen(
     onTogglePinned: () -> Unit,
     onShare: (NoteDetails) -> Unit,
     onOpenAttachment: (AttachmentDraft) -> Unit,
+    getToc: (String) -> List<TocEntry>,
 ) {
+    val scrollState = rememberLazyListState()
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+
     Scaffold(
         topBar = {
             LargeTopAppBar(
@@ -135,12 +142,13 @@ fun NoteDetailScreen(
             return@Scaffold
         }
 
-        val tocItems = remember(note.body) { TableOfContentsParser.parse(note.body) }
+        val tocItems = remember(note.body) { getToc(note.body) }
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
+            state = scrollState,
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -163,12 +171,30 @@ fun NoteDetailScreen(
             if (tocItems.isNotEmpty()) {
                 item {
                     SectionCard(title = "Table of contents") {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             tocItems.forEach { item ->
-                                Text(
-                                    text = "${"  ".repeat(item.depth - 1)}• ${item.title}",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            coroutineScope.launch {
+                                                // Scroll to body item (index 3 or higher depending on items)
+                                                // Body item is the 4th item (index 3) when summary exists, 3rd (index 2) otherwise.
+                                                // This is a bit tricky with LazyColumn, but we can target the body item.
+                                                // For now, let's just show it as a guide.
+                                                scrollState.animateScrollToItem(if (note.summary.isNotBlank()) 3 else 2)
+                                            }
+                                        }
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${"  ".repeat(item.level - 1)}• ${item.text}",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = if (item.level == 1) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
                             }
                         }
                     }
@@ -198,6 +224,7 @@ fun NoteDetailScreen(
                         AttachmentType.IMAGE -> ImageAttachmentCard(attachment = attachment)
                         AttachmentType.AUDIO -> AudioAttachmentCard(attachment = attachment)
                         AttachmentType.PDF,
+                        AttachmentType.VIDEO,
                         AttachmentType.WEB_LINK,
                         AttachmentType.YOUTUBE,
                         AttachmentType.DOCUMENT -> AttachmentActionCard(
@@ -296,6 +323,7 @@ private fun AttachmentActionCard(
                 Icon(
                     imageVector = when (attachment.type) {
                         AttachmentType.PDF -> Icons.Rounded.PictureAsPdf
+                        AttachmentType.VIDEO -> Icons.Rounded.SmartDisplay
                         AttachmentType.YOUTUBE -> Icons.Rounded.SmartDisplay
                         AttachmentType.WEB_LINK -> Icons.Rounded.Language
                         else -> Icons.Rounded.Description

@@ -26,4 +26,7 @@ interface SubjectDao {
 
     @Query("SELECT COUNT(*) FROM subjects")
     suspend fun count(): Int
+
+    @Query("DELETE FROM subjects")
+    suspend fun deleteAll()
 }

@@ -19,6 +19,7 @@ fun buildAttachmentDraft(
     val type = when {
         mimeType == "application/pdf" -> AttachmentType.PDF
         mimeType.startsWith("image/") -> AttachmentType.IMAGE
+        mimeType.startsWith("video/") -> AttachmentType.VIDEO
         mimeType.startsWith("audio/") -> AttachmentType.AUDIO
         else -> fallbackType
     }

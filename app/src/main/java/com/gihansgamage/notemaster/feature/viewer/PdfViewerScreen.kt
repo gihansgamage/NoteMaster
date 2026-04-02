@@ -106,9 +106,10 @@ fun PdfViewerScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (viewerState.page != null) {
+            val page = viewerState.page
+            if (page != null) {
                 Image(
-                    bitmap = viewerState.page.bitmap.asImageBitmap(),
+                    bitmap = page.bitmap.asImageBitmap(),
                     contentDescription = "PDF page",
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -130,13 +131,13 @@ fun PdfViewerScreen(
             ) {
                 OutlinedButton(
                     onClick = { currentPage = (visiblePage - 1).coerceAtLeast(0) },
-                    enabled = visiblePage > 0 && viewerState.page != null,
+                    enabled = visiblePage > 0 && page != null,
                 ) {
                     Text("Previous page")
                 }
                 Button(
                     onClick = { currentPage = (visiblePage + 1).coerceAtMost(pageCount - 1) },
-                    enabled = visiblePage < pageCount - 1 && viewerState.page != null,
+                    enabled = visiblePage < pageCount - 1 && page != null,
                 ) {
                     Text("Next page")
                 }
@@ -153,10 +154,10 @@ private fun renderPdfPage(
     return runCatching {
         context.contentResolver.openFileDescriptor(uri, "r")?.use { fileDescriptor ->
             PdfRenderer(fileDescriptor).use { renderer ->
-                val safePage = pageIndex.coerceIn(0, renderer.pageCount - 1)
+                    val safePage = pageIndex.coerceIn(0, renderer.pageCount - 1)
                 renderer.openPage(safePage).use { page ->
-                    val width = page.width * 2
-                    val height = page.height * 2
+                    val width = (page.width * 1.5).toInt()
+                    val height = (page.height * 1.5).toInt()
                     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                     bitmap.eraseColor(android.graphics.Color.WHITE)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)

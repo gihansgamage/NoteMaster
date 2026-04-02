@@ -194,6 +194,12 @@ class OfflineNoteRepository(
         }
     }
 
+    override suspend fun deleteAllData() {
+        database.noteDao().deleteAll()
+        database.subjectDao().deleteAll()
+        database.tagDao().deleteAll()
+    }
+
     private suspend fun findOrCreateTag(name: String, tagDao: com.gihansgamage.notemaster.data.local.dao.TagDao): Long {
         tagDao.findByName(name)?.let { return it.id }
         val insertedId = tagDao.insert(TagEntity(name = name))

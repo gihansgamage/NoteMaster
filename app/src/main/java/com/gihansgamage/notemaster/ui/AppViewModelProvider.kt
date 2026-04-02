@@ -11,6 +11,7 @@ object AppViewModelProvider {
             val application = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as NoteMasterApplication
             NoteMasterViewModel(
                 repository = application.container.noteRepository,
+                preferencesRepository = application.container.userPreferencesRepository,
                 summarizer = application.container.noteSummarizer,
             )
         }

@@ -39,6 +39,7 @@ class HeuristicNoteSummarizer : NoteSummarizer {
                 when (type) {
                     AttachmentType.PDF -> "$count PDF"
                     AttachmentType.IMAGE -> "$count image"
+                    AttachmentType.VIDEO -> "$count video clip"
                     AttachmentType.AUDIO -> "$count audio clip"
                     AttachmentType.DOCUMENT -> "$count document"
                     AttachmentType.WEB_LINK -> "$count web link"

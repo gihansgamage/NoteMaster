@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.PlayCircleOutline
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,8 +43,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,22 +68,46 @@ fun HomeScreen(
     uiState: HomeUiState,
     onSearchChange: (String) -> Unit,
     onSelectSubject: (Long?) -> Unit,
+    userName: String,
     onCreateNote: () -> Unit,
     onOpenNote: (Long) -> Unit,
     onEditNote: (Long) -> Unit,
     onTogglePinned: (Long) -> Unit,
+    onOpenSettings: () -> Unit,
+    onCreateSubject: (String) -> Unit,
 ) {
+    var showSubjectDialog by remember { mutableStateOf(false) }
+
+    if (showSubjectDialog) {
+        AddSubjectDialog(
+            onDismiss = { showSubjectDialog = false },
+            onConfirm = { name ->
+                onCreateSubject(name)
+                showSubjectDialog = false
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             LargeTopAppBar(
                 title = {
                     Column {
-                        Text("Note Master")
                         Text(
-                            text = "Organize class notes, files, and summaries in one calm space",
+                            text = getGreeting(userName),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Your smart note companion",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Rounded.Settings, contentDescription = "Settings")
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
@@ -120,10 +152,11 @@ fun HomeScreen(
             }
 
             item {
-                SubjectFilterRow(
+                NotebookSection(
+                    subjects = uiState.subjects,
                     selectedSubjectId = uiState.selectedSubjectId,
                     onSelectSubject = onSelectSubject,
-                    subjects = uiState.subjects.map { it.id to it.name },
+                    onCreateSubject = { showSubjectDialog = true }
                 )
             }
 
@@ -196,53 +229,106 @@ private fun StatPill(label: String) {
 }
 
 @Composable
-private fun SubjectFilterRow(
+private fun NotebookSection(
+    subjects: List<com.gihansgamage.notemaster.data.local.entity.SubjectEntity>,
     selectedSubjectId: Long?,
     onSelectSubject: (Long?) -> Unit,
-    subjects: List<Pair<Long, String>>,
+    onCreateSubject: () -> Unit,
 ) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            SubjectPill(
-                title = "All",
-                selected = selectedSubjectId == null,
-                onClick = { onSelectSubject(null) },
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Your Notebooks",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
+            // The user wants a "create notebook" button here
+            TextButton(onClick = onCreateSubject) {
+                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.size(4.dp))
+                Text("Create")
+            }
         }
-        items(subjects, key = { it.first }) { (id, name) ->
-            SubjectPill(
-                title = name,
-                selected = selectedSubjectId == id,
-                onClick = { onSelectSubject(id) },
-            )
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 8.dp)
+        ) {
+            item {
+                NotebookCard(
+                    name = "All Notes",
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    selected = selectedSubjectId == null,
+                    onClick = { onSelectSubject(null) }
+                )
+            }
+            items(subjects, key = { it.id }) { subject ->
+                NotebookCard(
+                    name = subject.name,
+                    color = subject.accentColorHex.toColorOrFallback(),
+                    selected = selectedSubjectId == subject.id,
+                    onClick = { onSelectSubject(subject.id) }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SubjectPill(
-    title: String,
+private fun NotebookCard(
+    name: String,
+    color: Color,
     selected: Boolean,
-    onClick: () -> Unit,
+    onClick: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        modifier = Modifier.clickable(onClick = onClick),
+    Card(
+        modifier = Modifier
+            .size(width = 130.dp, height = 160.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else color.copy(alpha = 0.3f)
+        ),
+        border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
-        Text(
-            text = title,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelLarge,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Bottom
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(color),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.Description,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -381,6 +467,7 @@ private fun AttachmentSummaryRow(note: NoteDetails) {
                 Icon(
                     imageVector = when (attachment.type) {
                         AttachmentType.PDF -> Icons.Rounded.PictureAsPdf
+                        AttachmentType.VIDEO -> Icons.Rounded.PlayCircleOutline
                         AttachmentType.YOUTUBE -> Icons.Rounded.PlayCircleOutline
                         else -> Icons.Rounded.Description
                     },
@@ -425,6 +512,7 @@ private fun EmptyNotesCard(modifier: Modifier = Modifier) {
 
 private fun attachmentLeadIcon(note: NoteDetails) = when {
     note.attachments.any { it.type == AttachmentType.PDF } -> Icons.Rounded.PictureAsPdf
+    note.attachments.any { it.type == AttachmentType.VIDEO } -> Icons.Rounded.PlayCircleOutline
     note.attachments.any { it.type == AttachmentType.YOUTUBE } -> Icons.Rounded.PlayCircleOutline
     else -> Icons.Rounded.Description
 }
@@ -433,4 +521,48 @@ private fun String?.toColorOrFallback(): Color {
     return runCatching {
         Color(parseColor(this ?: "#EAE6DE"))
     }.getOrDefault(Color(0xFFEAE6DE))
+}
+
+private fun getGreeting(name: String): String {
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val timeGreeting = when (hour) {
+        in 0..11 -> "Good Morning"
+        in 12..16 -> "Good Afternoon"
+        else -> "Good Evening"
+    }
+    return if (name.isNotBlank()) "$timeGreeting, ${name.trim()}" else "Note Master"
+}
+
+@Composable
+private fun AddSubjectDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Create Notebook") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Notebook Name") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onConfirm(name) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

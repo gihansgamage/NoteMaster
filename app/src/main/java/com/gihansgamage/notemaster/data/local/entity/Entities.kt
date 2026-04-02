@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey
 enum class AttachmentType {
     PDF,
     IMAGE,
+    VIDEO,
     AUDIO,
     DOCUMENT,
     WEB_LINK,

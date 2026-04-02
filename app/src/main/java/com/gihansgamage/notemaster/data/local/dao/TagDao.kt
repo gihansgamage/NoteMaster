@@ -17,4 +17,7 @@ interface TagDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(tag: TagEntity): Long
+
+    @Query("DELETE FROM tags")
+    suspend fun deleteAll()
 }

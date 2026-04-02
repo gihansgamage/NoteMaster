@@ -15,4 +15,5 @@ interface NoteRepository {
     suspend fun togglePinned(noteId: Long)
     suspend fun createSubject(name: String): SubjectEntity
     suspend fun ensureSeedData()
+    suspend fun deleteAllData()
 }
