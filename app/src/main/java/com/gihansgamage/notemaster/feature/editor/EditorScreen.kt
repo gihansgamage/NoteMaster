@@ -2,7 +2,7 @@ package com.gihansgamage.notemaster.feature.editor
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -335,17 +335,17 @@ private fun rememberAttachmentPicker(
     fallbackType: AttachmentType,
     onAddAttachment: (AttachmentDraft) -> Unit,
 ) = LocalContext.current.let { context ->
-    rememberLauncherForActivityResult(contract = OpenDocument()) { uri ->
-    if (uri != null) {
-        runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
+    rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        uris.forEach { uri ->
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            onAddAttachment(buildAttachmentDraft(context, uri, fallbackType))
         }
-        onAddAttachment(buildAttachmentDraft(context, uri, fallbackType))
     }
-}
 }
 
 @Composable
