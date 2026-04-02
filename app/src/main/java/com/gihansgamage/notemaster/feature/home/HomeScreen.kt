@@ -167,6 +167,7 @@ fun HomeScreen(
             item {
                 NotebookSection(
                     subjects = uiState.subjects,
+                    notes = uiState.notes,
                     selectedSubjectId = uiState.selectedSubjectId,
                     onSelectSubject = onSelectSubject,
                     onCreateSubject = { showSubjectDialog = true },
@@ -253,6 +254,7 @@ private fun StatPill(label: String) {
 @Composable
 private fun NotebookSection(
     subjects: List<com.gihansgamage.notemaster.data.local.entity.SubjectEntity>,
+    notes: List<com.gihansgamage.notemaster.data.model.NoteDetails>,
     selectedSubjectId: Long?,
     onSelectSubject: (Long?) -> Unit,
     onCreateSubject: () -> Unit,
@@ -294,6 +296,7 @@ private fun NotebookSection(
                 NotebookCard(
                     name = "All Notes",
                     color = MaterialTheme.colorScheme.surfaceVariant,
+                    materialCount = notes.sumOf { it.attachments.size },
                     selected = selectedSubjectId == null,
                     onClick = { onSelectSubject(null) }
                 )
@@ -302,6 +305,7 @@ private fun NotebookSection(
                 NotebookCard(
                     name = subject.name,
                     color = subject.accentColorHex.toColorOrFallback(),
+                    materialCount = notes.filter { it.subject?.id == subject.id }.sumOf { it.attachments.size },
                     selected = selectedSubjectId == subject.id,
                     onClick = { onSelectSubject(subject.id) },
                     onDelete = { onDeleteSubject(subject.id) },
@@ -316,6 +320,7 @@ private fun NotebookSection(
 private fun NotebookCard(
     name: String,
     color: Color,
+    materialCount: Int,
     selected: Boolean,
     onClick: () -> Unit,
     onDelete: (() -> Unit)? = null,
@@ -401,11 +406,16 @@ private fun NotebookCard(
             }
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = name,
+                text = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "$materialCount Materials",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

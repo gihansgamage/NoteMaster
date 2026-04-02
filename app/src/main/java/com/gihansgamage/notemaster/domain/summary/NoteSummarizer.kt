@@ -41,7 +41,7 @@ class HeuristicNoteSummarizer : NoteSummarizer {
                     AttachmentType.IMAGE -> "$count image"
                     AttachmentType.VIDEO -> "$count video clip"
                     AttachmentType.AUDIO -> "$count audio clip"
-                    AttachmentType.DOCUMENT -> "$count document"
+                    AttachmentType.TEXT -> "$count text"
                     AttachmentType.WEB_LINK -> "$count web link"
                     AttachmentType.YOUTUBE -> "$count YouTube link"
                 } + if (count > 1) "s" else ""

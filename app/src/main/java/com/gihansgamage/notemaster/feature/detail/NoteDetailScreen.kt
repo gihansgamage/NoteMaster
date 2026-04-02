@@ -32,9 +32,11 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.SmartDisplay
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -227,7 +229,7 @@ fun NoteDetailScreen(
                         AttachmentType.VIDEO,
                         AttachmentType.WEB_LINK,
                         AttachmentType.YOUTUBE,
-                        AttachmentType.DOCUMENT -> AttachmentActionCard(
+                        AttachmentType.TEXT -> AttachmentActionCard(
                             attachment = attachment,
                             onOpen = { onOpenAttachment(attachment) },
                         )
@@ -323,9 +325,10 @@ private fun AttachmentActionCard(
                 Icon(
                     imageVector = when (attachment.type) {
                         AttachmentType.PDF -> Icons.Rounded.PictureAsPdf
-                        AttachmentType.VIDEO -> Icons.Rounded.SmartDisplay
-                        AttachmentType.YOUTUBE -> Icons.Rounded.SmartDisplay
-                        AttachmentType.WEB_LINK -> Icons.Rounded.Language
+                        AttachmentType.VIDEO -> Icons.Rounded.PlayCircle
+                        AttachmentType.YOUTUBE -> Icons.Rounded.PlayCircle
+                        AttachmentType.WEB_LINK -> Icons.Rounded.Link
+                        AttachmentType.TEXT -> Icons.Rounded.Article
                         else -> Icons.Rounded.Description
                     },
                     contentDescription = null,
@@ -346,7 +349,7 @@ private fun AttachmentActionCard(
                 Icon(Icons.Rounded.OpenInNew, contentDescription = null)
                 Text("Open")
             }
-            if (attachment.type == AttachmentType.DOCUMENT) {
+            if (attachment.type == AttachmentType.TEXT) {
                 Text(
                     text = "PDF opens inside the app. Other office documents are attached and can be handed off to a compatible viewer.",
                     style = MaterialTheme.typography.bodyMedium,

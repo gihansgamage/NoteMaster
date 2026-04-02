@@ -99,6 +99,7 @@ class OfflineNoteRepository(
                             mimeType = attachment.mimeType,
                             type = attachment.type,
                             linkUrl = attachment.linkUrl,
+                            content = attachment.content,
                             createdAt = now,
                         )
                     },
@@ -245,6 +246,7 @@ class OfflineNoteRepository(
                     mimeType = attachment.mimeType,
                     type = attachment.type,
                     linkUrl = attachment.linkUrl,
+                    content = attachment.content,
                 )
             },
             createdAt = note.note.createdAt,

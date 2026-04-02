@@ -10,7 +10,7 @@ enum class AttachmentType {
     IMAGE,
     VIDEO,
     AUDIO,
-    DOCUMENT,
+    TEXT,
     WEB_LINK,
     YOUTUBE,
 }
@@ -105,5 +105,6 @@ data class AttachmentEntity(
     val mimeType: String,
     val type: AttachmentType,
     val linkUrl: String?,
+    val content: String?,
     val createdAt: Long,
 )

@@ -8,5 +8,12 @@ class Converters {
     fun fromAttachmentType(type: AttachmentType): String = type.name
 
     @TypeConverter
-    fun toAttachmentType(value: String): AttachmentType = AttachmentType.valueOf(value)
+    fun toAttachmentType(value: String): AttachmentType {
+        return try {
+            if (value == "DOCUMENT") AttachmentType.TEXT
+            else AttachmentType.valueOf(value)
+        } catch (e: Exception) {
+            AttachmentType.TEXT // Safe fallback
+        }
+    }
 }

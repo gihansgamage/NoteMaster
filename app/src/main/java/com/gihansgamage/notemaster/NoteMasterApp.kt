@@ -3,6 +3,7 @@ package com.gihansgamage.notemaster
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -31,6 +32,8 @@ import com.gihansgamage.notemaster.feature.home.HomeScreen
 import com.gihansgamage.notemaster.feature.viewer.PdfViewerScreen
 import com.gihansgamage.notemaster.feature.viewer.VideoViewerScreen
 import com.gihansgamage.notemaster.feature.viewer.WebMediaScreen
+import com.gihansgamage.notemaster.feature.viewer.TextViewerScreen
+import com.gihansgamage.notemaster.feature.viewer.ImageViewerScreen
 import com.gihansgamage.notemaster.ui.AppViewModelProvider
 import com.gihansgamage.notemaster.ui.NoteMasterViewModel
 import com.gihansgamage.notemaster.ui.theme.NoteMasterTheme
@@ -48,6 +51,8 @@ private object Destination {
     const val Video = "video?title={title}&uri={uri}"
     const val Web = "web?title={title}&url={url}"
     const val Audio = "audio?title={title}&uri={uri}"
+    const val Image = "image?title={title}&uri={uri}"
+    const val Text = "text?title={title}&content={content}"
     const val SubjectDetail = "subject_detail/{subjectId}"
     const val Welcome = "welcome"
     const val Settings = "settings"
@@ -59,6 +64,8 @@ private object Destination {
     fun video(title: String, uri: String): String = "video?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
     fun web(title: String, url: String): String = "web?title=${Uri.encode(title)}&url=${Uri.encode(url)}"
     fun audio(title: String, uri: String): String = "audio?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
+    fun image(title: String, uri: String): String = "image?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
+    fun text(title: String, content: String): String = "text?title=${Uri.encode(title)}&content=${Uri.encode(content)}"
     fun subjectDetail(subjectId: Long): String = "subject_detail/$subjectId"
 }
 
@@ -173,6 +180,7 @@ fun NoteMasterApp(
                         onCreateSubject = viewModel::createSubject,
                         onTogglePinned = viewModel::togglePinnedInEditor,
                         onAddAttachment = viewModel::addAttachment,
+                        onAddTextMaterial = viewModel::addTextMaterial,
                         onAddLink = viewModel::addLink,
                         onRemoveAttachment = viewModel::removeAttachment,
                         onSave = {
@@ -236,8 +244,18 @@ fun NoteMasterApp(
                                     }
                                 }
 
-                                AttachmentType.DOCUMENT -> {
-                                    attachment.uri?.let { openExternally(context, it) }
+                                AttachmentType.IMAGE -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.image(attachment.title, uri))
+                                    }
+                                }
+
+                                AttachmentType.TEXT -> {
+                                    if (attachment.content != null) {
+                                        navController.navigate(Destination.text(attachment.title, attachment.content))
+                                    } else {
+                                        attachment.uri?.let { openExternally(context, it) }
+                                    }
                                 }
 
                                 else -> Unit
@@ -294,6 +312,7 @@ fun NoteMasterApp(
                                         navController.navigate(Destination.video(attachment.title, uri))
                                     }
                                 }
+                                AttachmentType.WEB_LINK,
                                 AttachmentType.YOUTUBE -> {
                                     attachment.linkUrl?.let { url ->
                                         navController.navigate(Destination.web(attachment.title, url))
@@ -302,6 +321,11 @@ fun NoteMasterApp(
                                 AttachmentType.AUDIO -> {
                                     attachment.uri?.let { uri ->
                                         navController.navigate(Destination.audio(attachment.title, uri))
+                                    }
+                                }
+                                AttachmentType.IMAGE -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.image(attachment.title, uri))
                                     }
                                 }
                                 else -> {}
@@ -364,6 +388,48 @@ fun NoteMasterApp(
                         title = backStackEntry.arguments?.getString("title").orEmpty(),
                         encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
                         onBack = { navController.popBackStack() },
+                    )
+                }
+
+                composable(
+                    route = Destination.Image,
+                    arguments = listOf(
+                        navArgument("title") { type = NavType.StringType },
+                        navArgument("uri") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    com.gihansgamage.notemaster.feature.viewer.ImageViewerScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+
+                composable(
+                    route = Destination.Text,
+                    arguments = listOf(
+                        navArgument("title") { type = NavType.StringType },
+                        navArgument("content") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    TextViewerScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        content = backStackEntry.arguments?.getString("content").orEmpty(),
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = Destination.Web,
+                    arguments = listOf(
+                        navArgument("title") { type = NavType.StringType },
+                        navArgument("url") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    WebMediaScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }

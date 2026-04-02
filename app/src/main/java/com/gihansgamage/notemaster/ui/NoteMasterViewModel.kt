@@ -40,6 +40,8 @@ data class EditorUiState(
     val availableSubjects: List<SubjectEntity> = emptyList(),
     val summaryPreview: String = "",
     val isPinned: Boolean = false,
+    val isSaving: Boolean = false,
+    val suggestedTags: List<String> = emptyList(),
 )
 
 class NoteMasterViewModel(
@@ -59,6 +61,7 @@ class NoteMasterViewModel(
     private val searchQuery = MutableStateFlow("")
     private val editorDraft = MutableStateFlow(EditableNote())
     private val messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val isSaving = MutableStateFlow(false)
 
     val userMessages = messages.asSharedFlow()
 
@@ -67,6 +70,16 @@ class NoteMasterViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
+
+    val suggestedTags: StateFlow<List<String>> = combine(
+        editorDraft,
+        repository.observeNotes()
+    ) { draft, notes ->
+        notes.filter { it.subject?.id == draft.subjectId }
+            .flatMap { it.tagNames }
+            .distinct()
+            .sorted()
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val homeUiState: StateFlow<HomeUiState> = combine(
         repository.observeNotes(),
@@ -91,7 +104,12 @@ class NoteMasterViewModel(
         initialValue = HomeUiState(),
     )
 
-    val editorUiState: StateFlow<EditorUiState> = combine(editorDraft, subjects) { draft, subjectsList ->
+    val editorUiState: StateFlow<EditorUiState> = combine(
+        editorDraft, 
+        subjects, 
+        isSaving, 
+        suggestedTags
+    ) { draft, subjectsList, saving, suggested ->
         EditorUiState(
             noteId = draft.id,
             title = draft.title,
@@ -107,6 +125,8 @@ class NoteMasterViewModel(
                 tagNames = parseTags(draft.tagsText),
             ),
             isPinned = draft.isPinned,
+            isSaving = saving,
+            suggestedTags = suggested,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -146,7 +166,7 @@ class NoteMasterViewModel(
                     title = note.title,
                     body = note.body,
                     subjectId = note.subject?.id,
-                    tagsText = note.tagNames.joinToString(" ") { "#$it" },
+                    tagsText = note.tagNames.joinToString(", "),
                     attachments = note.attachments,
                     isPinned = note.isPinned,
                 )
@@ -195,6 +215,17 @@ class NoteMasterViewModel(
                 title = title.ifBlank { cleanUrl },
                 type = LinkClassifier.typeFor(cleanUrl),
                 linkUrl = cleanUrl,
+            ),
+        )
+    }
+
+    fun addTextMaterial(title: String, content: String) {
+        addAttachment(
+            AttachmentDraft(
+                localId = UUID.randomUUID().toString(),
+                title = title.ifBlank { "Text Material" },
+                type = AttachmentType.TEXT,
+                content = content,
             ),
         )
     }
@@ -297,6 +328,7 @@ class NoteMasterViewModel(
             note.summary,
             note.subject?.name.orEmpty(),
             note.tagNames.joinToString(" "),
+            note.attachments.joinToString(" ") { "${it.title} ${it.content.orEmpty()}" }
         ).joinToString(" ")
     }
 

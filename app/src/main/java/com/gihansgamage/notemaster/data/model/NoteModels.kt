@@ -10,6 +10,7 @@ data class AttachmentDraft(
     val mimeType: String = "",
     val type: AttachmentType,
     val linkUrl: String? = null,
+    val content: String? = null,
 )
 
 data class EditableNote(

@@ -22,7 +22,7 @@ import com.gihansgamage.notemaster.data.local.entity.TagEntity
         NoteTagCrossRef::class,
         AttachmentEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -41,7 +41,9 @@ abstract class NoteMasterDatabase : RoomDatabase() {
                     context = context.applicationContext,
                     klass = NoteMasterDatabase::class.java,
                     name = "note_master.db",
-                ).build().also { instance = it }
+                )
+                .fallbackToDestructiveMigration()
+                .build().also { instance = it }
             }
         }
     }

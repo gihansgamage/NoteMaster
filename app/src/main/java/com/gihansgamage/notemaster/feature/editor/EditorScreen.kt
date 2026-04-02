@@ -3,56 +3,24 @@ package com.gihansgamage.notemaster.feature.editor
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Audiotrack
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.PictureAsPdf
-import androidx.compose.material.icons.rounded.PlayCircleOutline
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material.icons.rounded.Subject
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import com.gihansgamage.notemaster.data.local.entity.AttachmentType
 import com.gihansgamage.notemaster.data.model.AttachmentDraft
 import com.gihansgamage.notemaster.ui.EditorUiState
@@ -71,18 +39,30 @@ fun EditorScreen(
     onCreateSubject: (String) -> Unit,
     onTogglePinned: () -> Unit,
     onAddAttachment: (AttachmentDraft) -> Unit,
+    onAddTextMaterial: (String, String) -> Unit,
     onAddLink: (String, String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
     onSave: () -> Unit,
 ) {
     var showLinkDialog by remember { mutableStateOf(false) }
+    var showTextDialog by remember { mutableStateOf(false) }
     var showSubjectDialog by remember { mutableStateOf(false) }
 
     val pdfPicker = rememberAttachmentPicker(fallbackType = AttachmentType.PDF, onAddAttachment = onAddAttachment)
     val imagePicker = rememberAttachmentPicker(fallbackType = AttachmentType.IMAGE, onAddAttachment = onAddAttachment)
     val audioPicker = rememberAttachmentPicker(fallbackType = AttachmentType.AUDIO, onAddAttachment = onAddAttachment)
     val videoPicker = rememberAttachmentPicker(fallbackType = AttachmentType.VIDEO, onAddAttachment = onAddAttachment)
-    val documentPicker = rememberAttachmentPicker(fallbackType = AttachmentType.DOCUMENT, onAddAttachment = onAddAttachment)
+    val textPicker = rememberAttachmentPicker(fallbackType = AttachmentType.TEXT, onAddAttachment = onAddAttachment)
+
+    if (showTextDialog) {
+        AddTextDialog(
+            onDismiss = { showTextDialog = false },
+            onConfirm = { title, content ->
+                onAddTextMaterial(title, content)
+                showTextDialog = false
+            },
+        )
+    }
 
     if (showLinkDialog) {
         AddLinkDialog(
@@ -90,7 +70,7 @@ fun EditorScreen(
             onConfirm = { title, url ->
                 onAddLink(title, url)
                 showLinkDialog = false
-            },
+            }
         )
     }
 
@@ -230,14 +210,9 @@ fun EditorScreen(
                             item {
                                 AssistChip(
                                     onClick = {
-                                        documentPicker.launch(
-                                            arrayOf(
-                                                "application/*",
-                                                "text/plain",
-                                            ),
-                                        )
+                                        showTextDialog = true
                                     },
-                                    label = { Text("Document") },
+                                    label = { Text("Text") },
                                     leadingIcon = { Icon(Icons.Rounded.Subject, contentDescription = null) },
                                 )
                             }
@@ -273,15 +248,38 @@ fun EditorScreen(
             }
 
             item {
-                OutlinedTextField(
-                    value = uiState.tagsText,
-                    onValueChange = onTagsChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Hashtags") },
-                    supportingText = { Text("e.g. #biology #exam") },
-                    shape = RoundedCornerShape(22.dp),
-                    singleLine = false,
-                )
+                Column {
+                    OutlinedTextField(
+                        value = uiState.tagsText,
+                        onValueChange = onTagsChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Hashtags") },
+                        supportingText = { Text("Separate tags by comma (e.g. biology, exam)") },
+                        shape = RoundedCornerShape(22.dp),
+                        singleLine = false,
+                    )
+                    if (uiState.suggestedTags.isNotEmpty()) {
+                        val currentTags = uiState.tagsText.split(Regex("[,\\s]+")).map { it.trim().lowercase() }.filter { it.isNotBlank() }
+                        val unusedTags = uiState.suggestedTags.filter { it !in currentTags }
+                        if (unusedTags.isNotEmpty()) {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                            ) {
+                                items(unusedTags) { tag ->
+                                    AssistChip(
+                                        onClick = {
+                                            val currentText = uiState.tagsText.trimEnd()
+                                            val separator = if (currentText.isEmpty() || currentText.endsWith(",")) "" else ", "
+                                            onTagsChange(currentText + separator + tag)
+                                        },
+                                        label = { Text(tag) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             item {
@@ -291,8 +289,8 @@ fun EditorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(320.dp),
-                    label = { Text("Note content") },
-                    placeholder = { Text("Write your detailed notes here...") },
+                    label = { Text("Description") },
+                    placeholder = { Text("Write your detailed description here...") },
                     shape = RoundedCornerShape(24.dp),
                 )
             }
@@ -432,7 +430,7 @@ private fun AttachmentEditorRow(
                         AttachmentType.IMAGE -> "Image"
                         AttachmentType.VIDEO -> "Video"
                         AttachmentType.AUDIO -> "Audio clip"
-                        AttachmentType.DOCUMENT -> "Document"
+                        AttachmentType.TEXT -> "Text Material"
                         AttachmentType.WEB_LINK -> "Web link"
                         AttachmentType.YOUTUBE -> "YouTube link"
                     },
@@ -523,4 +521,102 @@ private fun AddSubjectDialog(
             }
         },
     )
+}
+
+@Composable
+private fun AddTextDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit,
+) {
+    var title by remember { mutableStateOf("") }
+    var textValue by remember { mutableStateOf(TextFieldValue("")) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Text Material") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                
+                FormattingToolbar(
+                    textValue = textValue,
+                    onValueChange = { textValue = it }
+                )
+
+                OutlinedTextField(
+                    value = textValue,
+                    onValueChange = { textValue = it },
+                    label = { Text("Content") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    shape = RoundedCornerShape(16.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (title.isNotBlank() || textValue.text.isNotBlank()) {
+                        onConfirm(title, textValue.text)
+                    }
+                },
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+@Composable
+private fun FormattingToolbar(
+    textValue: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        val modifiers: List<Pair<androidx.compose.ui.graphics.vector.ImageVector, String>> = listOf(
+            Icons.Rounded.FormatBold to "**",
+            Icons.Rounded.FormatItalic to "_",
+            Icons.Rounded.AutoFixHigh to "==",
+            Icons.Rounded.FormatListBulleted to "\n• ",
+            Icons.Rounded.FormatListNumbered to "\n1. "
+        )
+
+        modifiers.forEach { (icon: androidx.compose.ui.graphics.vector.ImageVector, symbol: String) ->
+            IconButton(
+                onClick = {
+                    val selection = textValue.selection
+                    val text = textValue.text
+                    val newText = if (selection.collapsed) {
+                        text.substring(0, selection.start) + symbol + symbol + text.substring(selection.end)
+                    } else {
+                        text.substring(0, selection.start) + symbol + text.substring(selection.start, selection.end) + symbol + text.substring(selection.end)
+                    }
+                    val newSelection = if (selection.collapsed) {
+                        TextRange(selection.start + symbol.length)
+                    } else {
+                        TextRange(selection.end + symbol.length * 2)
+                    }
+                    onValueChange(textValue.copy(text = newText, selection = newSelection))
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
 }

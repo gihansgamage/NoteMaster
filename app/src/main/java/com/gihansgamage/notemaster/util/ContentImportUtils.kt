@@ -11,7 +11,7 @@ import java.util.UUID
 fun buildAttachmentDraft(
     context: Context,
     uri: Uri,
-    fallbackType: AttachmentType = AttachmentType.DOCUMENT,
+    fallbackType: AttachmentType = AttachmentType.TEXT,
 ): AttachmentDraft {
     val resolver = context.contentResolver
     val mimeType = resolver.getType(uri).orEmpty()
@@ -21,6 +21,7 @@ fun buildAttachmentDraft(
         mimeType.startsWith("image/") -> AttachmentType.IMAGE
         mimeType.startsWith("video/") -> AttachmentType.VIDEO
         mimeType.startsWith("audio/") -> AttachmentType.AUDIO
+        mimeType.startsWith("text/") -> AttachmentType.TEXT
         else -> fallbackType
     }
 
