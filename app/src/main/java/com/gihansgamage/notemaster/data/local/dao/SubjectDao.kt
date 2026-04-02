@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.gihansgamage.notemaster.data.local.entity.SubjectEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -11,6 +12,9 @@ import kotlinx.coroutines.flow.Flow
 interface SubjectDao {
     @Query("SELECT * FROM subjects ORDER BY name ASC")
     fun observeAll(): Flow<List<SubjectEntity>>
+
+    @Query("SELECT * FROM subjects WHERE id = :id")
+    fun observeById(id: Long): Flow<SubjectEntity?>
 
     @Query("SELECT * FROM subjects ORDER BY name ASC")
     suspend fun getAll(): List<SubjectEntity>
@@ -26,6 +30,12 @@ interface SubjectDao {
 
     @Query("SELECT COUNT(*) FROM subjects")
     suspend fun count(): Int
+
+    @Update
+    suspend fun update(subject: SubjectEntity)
+
+    @Query("DELETE FROM subjects WHERE id = :id")
+    suspend fun deleteById(id: Long)
 
     @Query("DELETE FROM subjects")
     suspend fun deleteAll()

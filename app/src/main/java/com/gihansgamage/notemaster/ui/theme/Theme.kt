@@ -16,16 +16,17 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColors = lightColorScheme(
-    primary = DeepSage,
+    primary = IndigoPrimary,
     onPrimary = Cloud,
-    secondary = Clay,
+    secondary = IndigoSecondary,
     onSecondary = Cloud,
     tertiary = Sage,
-    background = SoftPeach,
-    surface = Cloud,
-    surfaceVariant = Mist,
-    onBackground = Ink,
-    onSurface = Ink,
+    background = SlateBackground,
+    surface = SlateSurface,
+    surfaceVariant = IndigoContainer,
+    onBackground = SlateTextPrimary,
+    onSurface = SlateTextPrimary,
+    outline = SlateOutline,
 )
 
 private val DarkColors = darkColorScheme(

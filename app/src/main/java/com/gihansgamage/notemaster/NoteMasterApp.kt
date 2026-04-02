@@ -35,6 +35,10 @@ import com.gihansgamage.notemaster.ui.AppViewModelProvider
 import com.gihansgamage.notemaster.ui.NoteMasterViewModel
 import com.gihansgamage.notemaster.ui.theme.NoteMasterTheme
 import kotlinx.coroutines.flow.collectLatest
+import com.gihansgamage.notemaster.feature.subject.SubjectDetailScreen
+import com.gihansgamage.notemaster.feature.viewer.AudioPlayerScreen
+import androidx.compose.material3.ExperimentalMaterial3Api
+import kotlin.OptIn
 
 private object Destination {
     const val Home = "home"
@@ -43,6 +47,8 @@ private object Destination {
     const val Pdf = "pdf?title={title}&uri={uri}"
     const val Video = "video?title={title}&uri={uri}"
     const val Web = "web?title={title}&url={url}"
+    const val Audio = "audio?title={title}&uri={uri}"
+    const val SubjectDetail = "subject_detail/{subjectId}"
     const val Welcome = "welcome"
     const val Settings = "settings"
 
@@ -52,8 +58,11 @@ private object Destination {
     fun pdf(title: String, uri: String): String = "pdf?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
     fun video(title: String, uri: String): String = "video?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
     fun web(title: String, url: String): String = "web?title=${Uri.encode(title)}&url=${Uri.encode(url)}"
+    fun audio(title: String, uri: String): String = "audio?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
+    fun subjectDetail(subjectId: Long): String = "subject_detail/$subjectId"
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteMasterApp(
     viewModel: NoteMasterViewModel = viewModel(factory = AppViewModelProvider.Factory),
@@ -86,7 +95,13 @@ fun NoteMasterApp(
                     HomeScreen(
                         uiState = homeUiState,
                         onSearchChange = viewModel::updateSearchQuery,
-                        onSelectSubject = viewModel::selectSubjectFilter,
+                        onSelectSubject = { subjectId ->
+                            if (subjectId != null) {
+                                navController.navigate(Destination.subjectDetail(subjectId))
+                            } else {
+                                viewModel.selectSubjectFilter(null)
+                            }
+                        },
                         userName = userPreferences.userName,
                         onCreateNote = {
                             viewModel.startNewNote()
@@ -102,7 +117,9 @@ fun NoteMasterApp(
                         onOpenSettings = {
                             navController.navigate(Destination.Settings)
                         },
-                        onCreateSubject = viewModel::createSubject
+                        onCreateSubject = viewModel::createSubject,
+                        onDeleteSubject = viewModel::deleteSubject,
+                        onRenameSubject = viewModel::updateSubject,
                     )
                 }
 
@@ -212,6 +229,12 @@ fun NoteMasterApp(
                                     }
                                 }
 
+                                AttachmentType.AUDIO -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.audio(attachment.title, uri))
+                                    }
+                                }
+
                                 AttachmentType.DOCUMENT -> {
                                     attachment.uri?.let { openExternally(context, it) }
                                 }
@@ -238,6 +261,56 @@ fun NoteMasterApp(
                         encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
                         onOpenExternal = { rawUri -> openExternally(context, rawUri) },
                         onBack = { navController.popBackStack() },
+                    )
+                }
+
+                composable(
+                    route = Destination.SubjectDetail,
+                    arguments = listOf(
+                        navArgument("subjectId") { type = NavType.LongType }
+                    )
+                ) { backStackEntry ->
+                    val subjectId = backStackEntry.arguments?.getLong("subjectId") ?: return@composable
+                    val subject by viewModel.observeSubject(subjectId).collectAsStateWithLifecycle(initialValue = null)
+                    val notes by viewModel.observeNotesBySubject(subjectId).collectAsStateWithLifecycle(initialValue = emptyList())
+
+                    SubjectDetailScreen(
+                        subject = subject,
+                        notes = notes,
+                        onBack = { navController.popBackStack() },
+                        onOpenNote = { noteId -> navController.navigate(Destination.detail(noteId)) },
+                        onEditNote = { noteId -> navController.navigate(Destination.editor(noteId)) },
+                        onTogglePinned = { noteId -> viewModel.togglePinned(noteId) },
+                        onOpenAttachment = { attachment ->
+                            when (attachment.type) {
+                                AttachmentType.PDF -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.pdf(attachment.title, uri))
+                                    }
+                                }
+                                AttachmentType.VIDEO -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.video(attachment.title, uri))
+                                    }
+                                }
+                                AttachmentType.YOUTUBE -> {
+                                    attachment.linkUrl?.let { url ->
+                                        navController.navigate(Destination.web(attachment.title, url))
+                                    }
+                                }
+                                AttachmentType.AUDIO -> {
+                                    attachment.uri?.let { uri ->
+                                        navController.navigate(Destination.audio(attachment.title, uri))
+                                    }
+                                }
+                                else -> {}
+                            }
+                        },
+                        onCreateNote = { subjectId ->
+                            viewModel.startNewNote()
+                            viewModel.selectSubject(subjectId)
+                            navController.navigate(Destination.editor())
+                        }
                     )
                 }
 
@@ -274,6 +347,24 @@ fun NoteMasterApp(
                         onBack = { navController.popBackStack() },
                     )
                 }
+
+                composable(
+                    route = Destination.Audio,
+                    arguments = listOf(
+                        navArgument("title") {
+                            type = NavType.StringType
+                            defaultValue = "Audio"
+                        },
+                        navArgument("uri") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    @OptIn(ExperimentalMaterial3Api::class)
+                    AudioPlayerScreen(
+                        title = backStackEntry.arguments?.getString("title").orEmpty(),
+                        encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
 
             SnackbarHost(
@@ -284,6 +375,17 @@ fun NoteMasterApp(
             )
         }
     }
+}
+
+fun getGreeting(name: String): String {
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val prefix = when (hour) {
+        in 5..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        in 17..20 -> "Good evening"
+        else -> "Good night"
+    }
+    return "$prefix, ${name.ifBlank { "Smart NoteMaster" }}"
 }
 
 private fun shareNote(context: Context, note: NoteDetails) {

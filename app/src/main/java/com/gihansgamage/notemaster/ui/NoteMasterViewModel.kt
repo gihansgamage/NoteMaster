@@ -239,6 +239,20 @@ class NoteMasterViewModel(
         }
     }
 
+    fun deleteSubject(id: Long) {
+        viewModelScope.launch {
+            repository.deleteSubject(id)
+            messages.emit("Notebook deleted.")
+        }
+    }
+
+    fun updateSubject(id: Long, name: String) {
+        viewModelScope.launch {
+            repository.updateSubject(id, name)
+            messages.emit("Notebook renamed.")
+        }
+    }
+
     fun updateUserName(name: String) {
         viewModelScope.launch {
             preferencesRepository.updateUserName(name)
@@ -266,6 +280,10 @@ class NoteMasterViewModel(
     }
 
     fun noteDetails(id: Long): Flow<NoteDetails?> = repository.observeNote(id)
+
+    fun observeSubject(id: Long) = repository.observeSubject(id)
+
+    fun observeNotesBySubject(id: Long) = repository.observeNotesBySubject(id)
 
     fun getToc(body: String) = tocService.extractHeaders(body)
 

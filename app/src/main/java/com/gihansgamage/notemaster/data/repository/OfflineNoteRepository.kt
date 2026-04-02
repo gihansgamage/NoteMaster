@@ -29,6 +29,14 @@ class OfflineNoteRepository(
 
     override fun observeSubjects(): Flow<List<SubjectEntity>> = database.subjectDao().observeAll()
 
+    override fun observeSubject(subjectId: Long): Flow<SubjectEntity?> = database.subjectDao().observeById(subjectId)
+
+    override fun observeNotesBySubject(subjectId: Long): Flow<List<NoteDetails>> {
+        return database.noteDao().observeBySubject(subjectId).map { notes ->
+            notes.map(::toNoteDetails)
+        }
+    }
+
     override fun observeNote(noteId: Long): Flow<NoteDetails?> {
         return database.noteDao().observeById(noteId).map { note ->
             note?.let(::toNoteDetails)
@@ -141,6 +149,17 @@ class OfflineNoteRepository(
             database.subjectDao().findByName(normalized)
                 ?: error("Unable to create subject $normalized")
         }
+    }
+
+    override suspend fun updateSubject(id: Long, name: String) {
+        val subject = database.subjectDao().getAll().find { it.id == id }
+        if (subject != null) {
+            database.subjectDao().update(subject.copy(name = name.trim()))
+        }
+    }
+
+    override suspend fun deleteSubject(id: Long) {
+        database.subjectDao().deleteById(id)
     }
 
     override suspend fun ensureSeedData() {

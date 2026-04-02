@@ -31,8 +31,11 @@ import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -45,6 +48,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,15 +81,29 @@ fun HomeScreen(
     onTogglePinned: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onCreateSubject: (String) -> Unit,
+    onDeleteSubject: (Long) -> Unit,
+    onRenameSubject: (Long, String) -> Unit,
 ) {
     var showSubjectDialog by remember { mutableStateOf(false) }
-
+    var subjectToRename by remember { mutableStateOf<com.gihansgamage.notemaster.data.local.entity.SubjectEntity?>(null) }
+ 
     if (showSubjectDialog) {
         AddSubjectDialog(
             onDismiss = { showSubjectDialog = false },
             onConfirm = { name ->
                 onCreateSubject(name)
                 showSubjectDialog = false
+            }
+        )
+    }
+
+    if (subjectToRename != null) {
+        RenameSubjectDialog(
+            currentName = subjectToRename?.name.orEmpty(),
+            onDismiss = { subjectToRename = null },
+            onConfirm = { newName ->
+                subjectToRename?.let { onRenameSubject(it.id, newName) }
+                subjectToRename = null
             }
         )
     }
@@ -117,8 +137,8 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateNote) {
-                Icon(Icons.Rounded.Add, contentDescription = "Create note")
+            FloatingActionButton(onClick = { showSubjectDialog = true }) {
+                Icon(Icons.Rounded.Add, contentDescription = "Create Notebook")
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -130,13 +150,6 @@ fun HomeScreen(
             contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item {
-                HeroSection(
-                    noteCount = uiState.notes.size,
-                    subjectCount = uiState.subjects.size,
-                )
-            }
-
             item {
                 OutlinedTextField(
                     value = uiState.searchQuery,
@@ -156,7 +169,16 @@ fun HomeScreen(
                     subjects = uiState.subjects,
                     selectedSubjectId = uiState.selectedSubjectId,
                     onSelectSubject = onSelectSubject,
-                    onCreateSubject = { showSubjectDialog = true }
+                    onCreateSubject = { showSubjectDialog = true },
+                    onDeleteSubject = onDeleteSubject,
+                    onRenameSubject = { subjectToRename = it }
+                )
+            }
+
+            item {
+                HeroSection(
+                    noteCount = uiState.notes.size,
+                    subjectCount = uiState.subjects.size,
                 )
             }
 
@@ -234,6 +256,8 @@ private fun NotebookSection(
     selectedSubjectId: Long?,
     onSelectSubject: (Long?) -> Unit,
     onCreateSubject: () -> Unit,
+    onDeleteSubject: (Long) -> Unit,
+    onRenameSubject: (com.gihansgamage.notemaster.data.local.entity.SubjectEntity) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -252,10 +276,13 @@ private fun NotebookSection(
                 fontWeight = FontWeight.Bold
             )
             // The user wants a "create notebook" button here
-            TextButton(onClick = onCreateSubject) {
-                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.size(4.dp))
-                Text("Create")
+            TextButton(
+                onClick = onCreateSubject,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.size(6.dp))
+                Text("Create Notebook", fontWeight = FontWeight.Bold)
             }
         }
 
@@ -276,7 +303,9 @@ private fun NotebookSection(
                     name = subject.name,
                     color = subject.accentColorHex.toColorOrFallback(),
                     selected = selectedSubjectId == subject.id,
-                    onClick = { onSelectSubject(subject.id) }
+                    onClick = { onSelectSubject(subject.id) },
+                    onDelete = { onDeleteSubject(subject.id) },
+                    onRename = { onRenameSubject(subject) }
                 )
             }
         }
@@ -288,8 +317,12 @@ private fun NotebookCard(
     name: String,
     color: Color,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: (() -> Unit)? = null,
+    onRename: (() -> Unit)? = null,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .size(width = 130.dp, height = 160.dp)
@@ -306,19 +339,65 @@ private fun NotebookCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.Bottom
         ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(color),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Icon(
-                    Icons.Rounded.Description,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(color),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.Description,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                if (onDelete != null || onRename != null) {
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.MoreVert,
+                                contentDescription = "Menu",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            if (onRename != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Rename") },
+                                    onClick = {
+                                        showMenu = false
+                                        onRename()
+                                    },
+                                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                )
+                            }
+                            if (onDelete != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    onClick = {
+                                        showMenu = false
+                                        onDelete()
+                                    },
+                                    leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                )
+                            }
+                        }
+                    }
+                }
             }
             Spacer(modifier = Modifier.weight(1f))
             Text(
@@ -557,6 +636,41 @@ private fun AddSubjectDialog(
                 enabled = name.isNotBlank()
             ) {
                 Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun RenameSubjectDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var name by remember { mutableStateOf(currentName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename Notebook") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Notebook Name") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onConfirm(name) },
+                enabled = name.isNotBlank() && name != currentName
+            ) {
+                Text("Rename")
             }
         },
         dismissButton = {
