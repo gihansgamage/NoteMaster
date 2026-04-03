@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -39,6 +39,9 @@ import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SmartDisplay
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material3.Divider
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -143,33 +146,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = {
-            LargeTopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = getGreeting(userName),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Your smart note companion",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
-                windowInsets = WindowInsets.statusBars,
-            )
-        },
+        topBar = {},
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showSubjectDialog = true },
@@ -184,10 +161,17 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(bottom = innerPadding.calculateBottomPadding())
+                .statusBarsPadding(),
             contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            item {
+                HomeHeader(
+                    userName = userName,
+                    onSettingsClick = onOpenSettings
+                )
+            }
             item {
                 OutlinedTextField(
                     value = uiState.searchQuery,
@@ -657,8 +641,8 @@ private fun EmptyNotesCard(
 
 private fun attachmentLeadIcon(note: NoteDetails) = when {
     note.attachments.any { it.type == AttachmentType.PDF } -> Icons.Rounded.PictureAsPdf
-    note.attachments.any { it.type == AttachmentType.VIDEO } -> Icons.Rounded.PlayCircleOutline
-    note.attachments.any { it.type == AttachmentType.YOUTUBE } -> Icons.Rounded.PlayCircleOutline
+    note.attachments.any { it.type == AttachmentType.YOUTUBE } -> Icons.Rounded.SmartDisplay
+    note.attachments.any { it.type == AttachmentType.VIDEO } -> Icons.Rounded.PlayCircle
     else -> Icons.Rounded.Description
 }
 
@@ -666,6 +650,56 @@ private fun String?.toColorOrFallback(): Color {
     return runCatching {
         Color(parseColor(this ?: "#F1F5F9"))
     }.getOrDefault(Color(0xFFF1F5F9))
+}
+
+@Composable
+private fun HomeHeader(
+    userName: String,
+    onSettingsClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column {
+                Text(
+                    text = getGreeting(userName),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Your smart note companion",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        
+        IconButton(
+            onClick = onSettingsClick,
+            modifier = Modifier
+                .size(36.dp)
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    CircleShape
+                )
+        ) {
+            Icon(
+                Icons.Rounded.Settings,
+                contentDescription = "Settings",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 private fun getGreeting(name: String): String {

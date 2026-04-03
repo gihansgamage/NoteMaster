@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.*
 
@@ -83,19 +85,14 @@ fun PdfViewerScreen(
 
     Scaffold(
         topBar = {
-            LargeTopAppBar(
-                title = { Text(displayTitle) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            val isCurrentPageBookmarked = savedBookmarks.contains(currentPage)
+            ViewerHeader(
+                title = displayTitle,
+                onBack = onBack,
                 actions = {
-                    val isCurrentPageBookmarked = savedBookmarks.contains(currentPage)
-
                     if (savedBookmarks.isNotEmpty()) {
                         IconButton(onClick = { showBookmarksDialog = true }) {
-                            Icon(Icons.Rounded.Bookmarks, contentDescription = "View all bookmarks")
+                            Icon(Icons.Rounded.Bookmarks, contentDescription = "View all bookmarks", modifier = Modifier.size(20.dp))
                         }
                     }
 
@@ -110,17 +107,14 @@ fun PdfViewerScreen(
                     }) {
                         Icon(
                             if (isCurrentPageBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            contentDescription = "Toggle bookmark for this page"
+                            contentDescription = "Toggle bookmark for this page",
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                     IconButton(onClick = { showJumpDialog = true }) {
-                        Icon(Icons.Rounded.FindInPage, contentDescription = "Jump to page")
+                        Icon(Icons.Rounded.FindInPage, contentDescription = "Jump to page", modifier = Modifier.size(20.dp))
                     }
-                },
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
-                windowInsets = WindowInsets.statusBars,
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -258,6 +252,43 @@ fun PdfViewerScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ViewerHeader(
+    title: String,
+    onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back"
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(start = 8.dp)
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            actions()
+        }
     }
 }
 
