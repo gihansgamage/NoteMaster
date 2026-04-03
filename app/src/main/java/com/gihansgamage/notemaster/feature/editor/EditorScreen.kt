@@ -608,15 +608,14 @@ private fun FormattingToolbar(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val modifiers: List<Pair<androidx.compose.ui.graphics.vector.ImageVector, String>> = listOf(
+        // Inline styles
+        val inlineModifiers = listOf(
             Icons.Rounded.FormatBold to "**",
             Icons.Rounded.FormatItalic to "_",
-            Icons.Rounded.AutoFixHigh to "==",
-            Icons.Rounded.FormatListBulleted to "\n• ",
-            Icons.Rounded.FormatListNumbered to "\n1. "
+            Icons.Rounded.AutoFixHigh to "=="
         )
 
-        modifiers.forEach { (icon: androidx.compose.ui.graphics.vector.ImageVector, symbol: String) ->
+        inlineModifiers.forEach { (icon, symbol) ->
             IconButton(
                 onClick = {
                     val selection = textValue.selection
@@ -629,7 +628,9 @@ private fun FormattingToolbar(
                     val newSelection = if (selection.collapsed) {
                         TextRange(selection.start + symbol.length)
                     } else {
-                        TextRange(selection.end + symbol.length * 2)
+                        val newStart = selection.start
+                        val newEnd = selection.end + symbol.length * 2
+                        TextRange(newStart, newEnd)
                     }
                     onValueChange(textValue.copy(text = newText, selection = newSelection))
                 },
@@ -638,5 +639,66 @@ private fun FormattingToolbar(
                 Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
             }
         }
+
+        // List styles
+        val listModifiers = listOf(
+            Icons.Rounded.FormatListBulleted to "• ",
+            Icons.Rounded.FormatListNumbered to "1. "
+        )
+
+        listModifiers.forEach { (icon, prefix) ->
+            IconButton(
+                onClick = {
+                    onValueChange(toggleLinePrefix(textValue, prefix))
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+        }
     }
+}
+
+private fun toggleLinePrefix(textValue: TextFieldValue, prefix: String): TextFieldValue {
+    val selection = textValue.selection
+    val text = textValue.text
+    
+    // Pattern to match any list numbering "1. ", "2. ", etc if we are in numbering mode
+    val numberingRegex = Regex("^\\d+\\.\\s+")
+    val isNumbering = prefix.startsWith("1.")
+    
+    // Find the range of lines actually touched by the selection
+    val startLineIndex = text.substring(0, selection.start).lastIndexOf('\n') + 1
+    val endLineIndex = text.indexOf('\n', selection.end).let { if (it == -1) text.length else it }
+    
+    val selectedSegment = text.substring(startLineIndex, endLineIndex)
+    val lines = selectedSegment.split('\n')
+    
+    val anyStartsWithPrefix = lines.any { line ->
+        if (isNumbering) numberingRegex.containsMatchIn(line) else line.startsWith(prefix)
+    }
+    
+    var numberingCount = 1
+    val newLines = lines.map { line ->
+        if (anyStartsWithPrefix) {
+            // Remove prefix
+            if (isNumbering) line.replaceFirst(numberingRegex, "") else line.removePrefix(prefix)
+        } else {
+            // Add prefix
+            if (line.isBlank()) {
+                line
+            } else {
+                val p = if (isNumbering) "${numberingCount++}. " else prefix
+                p + line
+            }
+        }
+    }
+    
+    val newSegment = newLines.joinToString("\n")
+    val newText = text.substring(0, startLineIndex) + newSegment + text.substring(endLineIndex)
+    
+    return textValue.copy(
+        text = newText,
+        selection = TextRange(startLineIndex, startLineIndex + newSegment.length)
+    )
 }
