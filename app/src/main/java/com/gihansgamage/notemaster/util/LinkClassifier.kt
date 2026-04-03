@@ -28,11 +28,19 @@ object LinkClassifier {
         return runCatching {
             val uri = Uri.parse(url)
             val host = uri.host?.lowercase().orEmpty()
+            
             when {
+                // Handle youtu.be/VIDEO_ID
                 host.contains("youtu.be") -> uri.pathSegments.firstOrNull()
-                host.contains("youtube.com") && uri.pathSegments.firstOrNull() == "shorts" -> uri.pathSegments.getOrNull(1)
-                host.contains("youtube.com") && uri.pathSegments.firstOrNull() == "embed" -> uri.pathSegments.getOrNull(1)
-                host.contains("youtube.com") -> uri.getQueryParameter("v")
+                
+                // Handle youtube.com (m.youtube.com, etc.)
+                host.contains("youtube.com") -> {
+                    val segments = uri.pathSegments
+                    when (segments.firstOrNull()) {
+                        "shorts", "embed", "live", "v" -> segments.getOrNull(1)
+                        else -> uri.getQueryParameter("v")
+                    }
+                }
                 else -> null
             }
         }.getOrNull()?.takeIf { it.isNotBlank() }

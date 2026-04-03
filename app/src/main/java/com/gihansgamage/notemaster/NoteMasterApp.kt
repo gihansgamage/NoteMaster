@@ -237,7 +237,7 @@ fun NoteMasterApp(
 
                                 AttachmentType.YOUTUBE -> {
                                     attachment.linkUrl?.let { url ->
-                                        navController.navigate(Destination.youtube(attachment.title, url))
+                                        navController.navigate(Destination.web(attachment.title, url))
                                     }
                                 }
 
