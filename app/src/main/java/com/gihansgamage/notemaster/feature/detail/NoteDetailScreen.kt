@@ -131,7 +131,7 @@ fun NoteDetailScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             state = scrollState,
-            contentPadding = PaddingValues(bottom = 120.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
@@ -257,7 +257,7 @@ private fun NoteHeader(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(start = 4.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(

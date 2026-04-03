@@ -15,9 +15,9 @@ interface NoteRepository {
     suspend fun saveNote(draft: EditableNote): Long
     suspend fun deleteNote(noteId: Long)
     suspend fun togglePinned(noteId: Long)
+    suspend fun toggleSubjectPinned(id: Long)
     suspend fun createSubject(name: String): SubjectEntity
     suspend fun updateSubject(id: Long, name: String)
-    suspend fun togglePinnedSubject(id: Long)
     suspend fun deleteSubject(id: Long)
     suspend fun ensureSeedData()
     suspend fun deleteAllData()

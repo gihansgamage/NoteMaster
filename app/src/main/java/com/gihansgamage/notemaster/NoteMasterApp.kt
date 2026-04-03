@@ -121,13 +121,13 @@ fun NoteMasterApp(
                             navController.navigate(Destination.editor(noteId))
                         },
                         onTogglePinned = viewModel::togglePinned,
+                        onToggleSubjectPinned = viewModel::toggleSubjectPinned,
                         onOpenSettings = {
                             navController.navigate(Destination.Settings)
                         },
                         onCreateSubject = viewModel::createSubject,
                         onDeleteSubject = viewModel::deleteSubject,
                         onRenameSubject = viewModel::updateSubject,
-                        onTogglePinnedSubject = viewModel::togglePinnedSubject,
                     )
                 }
 

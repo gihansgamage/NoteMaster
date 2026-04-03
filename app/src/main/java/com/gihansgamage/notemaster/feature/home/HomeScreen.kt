@@ -2,6 +2,7 @@ package com.gihansgamage.notemaster.feature.home
 
 import android.graphics.Color.parseColor
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -94,11 +96,11 @@ fun HomeScreen(
     onOpenNote: (Long) -> Unit,
     onEditNote: (Long) -> Unit,
     onTogglePinned: (Long) -> Unit,
+    onToggleSubjectPinned: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onCreateSubject: (String) -> Unit,
     onDeleteSubject: (Long) -> Unit,
     onRenameSubject: (Long, String) -> Unit,
-    onTogglePinnedSubject: (Long) -> Unit,
 ) {
     var showSubjectDialog by remember { mutableStateOf(false) }
     var subjectToRename by remember { mutableStateOf<com.gihansgamage.notemaster.data.local.entity.SubjectEntity?>(null) }
@@ -227,7 +229,7 @@ fun HomeScreen(
                             notes = uiState.notes,
                             selectedSubjectId = uiState.selectedSubjectId,
                             onSelectSubject = onSelectSubject,
-                            onTogglePinnedSubject = onTogglePinnedSubject,
+                            onTogglePinned = onToggleSubjectPinned,
                             onCreateSubject = { showSubjectDialog = true },
                             onDeleteSubject = { subjectToDelete = it },
                             onRenameSubject = { subjectToRename = it }
@@ -279,7 +281,7 @@ fun HomeScreen(
                         notes = uiState.notes,
                         selectedSubjectId = uiState.selectedSubjectId,
                         onSelectSubject = onSelectSubject,
-                        onTogglePinnedSubject = onTogglePinnedSubject,
+                        onTogglePinned = onToggleSubjectPinned,
                         onCreateSubject = { showSubjectDialog = true },
                         onDeleteSubject = { subjectToDelete = it },
                         onRenameSubject = { subjectToRename = it }
@@ -288,7 +290,7 @@ fun HomeScreen(
 
                 item {
                     HeroSection(
-                        materialCount = uiState.notes.sumOf { it.attachments.size },
+                        materialCount = uiState.totalMaterialsCount,
                         subjectCount = uiState.subjects.size,
                     )
                 }
@@ -356,7 +358,7 @@ private fun HeroSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatPill(label = "$materialCount materials")
+                StatPill(label = "$materialCount total materials")
                 StatPill(label = "$subjectCount subjects")
             }
         }
@@ -383,7 +385,7 @@ private fun NotebookSection(
     notes: List<com.gihansgamage.notemaster.data.model.NoteDetails>,
     selectedSubjectId: Long?,
     onSelectSubject: (Long?) -> Unit,
-    onTogglePinnedSubject: (Long) -> Unit,
+    onTogglePinned: (Long) -> Unit,
     onCreateSubject: () -> Unit,
     onDeleteSubject: (com.gihansgamage.notemaster.data.local.entity.SubjectEntity) -> Unit,
     onRenameSubject: (com.gihansgamage.notemaster.data.local.entity.SubjectEntity) -> Unit,
@@ -438,7 +440,7 @@ private fun NotebookSection(
                     onClick = { onSelectSubject(subject.id) },
                     onDelete = { onDeleteSubject(subject) },
                     onRename = { onRenameSubject(subject) },
-                    onTogglePinned = { onTogglePinnedSubject(subject.id) }
+                    onTogglePinned = { onTogglePinned(subject.id) }
                 )
             }
         }
@@ -493,6 +495,25 @@ private fun NotebookCard(
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
+                    
+                    if (isPinned) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 4.dp, y = (-4).dp)
+                                .size(14.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.PushPin,
+                                contentDescription = null,
+                                modifier = Modifier.size(8.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
                 }
 
                 if (onDelete != null || onRename != null) {
@@ -513,7 +534,7 @@ private fun NotebookCard(
                         ) {
                             if (onTogglePinned != null) {
                                 DropdownMenuItem(
-                                    text = { Text(if (isPinned) "Unpin from Top" else "Pin to Top") },
+                                    text = { Text(if (isPinned) "Unpin from top" else "Pin to top") },
                                     onClick = {
                                         showMenu = false
                                         onTogglePinned()
@@ -552,24 +573,13 @@ private fun NotebookCard(
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                if (isPinned) {
-                    Icon(
-                        Icons.Rounded.PushPin,
-                        contentDescription = "Pinned",
-                        modifier = Modifier.size(14.dp).padding(top = 2.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            Text(
+                text = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Text(
                 text = "$materialCount Materials",
                 style = MaterialTheme.typography.labelMedium,

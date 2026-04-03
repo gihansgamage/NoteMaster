@@ -28,6 +28,7 @@ data class HomeUiState(
     val subjects: List<SubjectEntity> = emptyList(),
     val selectedSubjectId: Long? = null,
     val searchQuery: String = "",
+    val totalMaterialsCount: Int = 0,
 )
 
 data class EditorUiState(
@@ -92,9 +93,7 @@ class NoteMasterViewModel(
             val textMatches = query.isBlank() || buildSearchableText(note).contains(query.trim(), ignoreCase = true)
             subjectMatches && textMatches
         }
-        val filteredSubjects = if (query.isBlank()) {
-            subjectsList.sortedWith(compareByDescending<SubjectEntity> { it.isPinned }.thenBy { it.name })
-        } else {
+        val filteredSubjects = if (query.isBlank()) subjectsList else {
             subjectsList.filter { it.name.contains(query.trim(), ignoreCase = true) }
         }
         HomeUiState(
@@ -102,6 +101,7 @@ class NoteMasterViewModel(
             subjects = filteredSubjects,
             selectedSubjectId = selectedId,
             searchQuery = query,
+            totalMaterialsCount = notes.sumOf { it.attachments.size }
         )
     }.stateIn(
         scope = viewModelScope,
@@ -270,12 +270,6 @@ class NoteMasterViewModel(
         }
     }
 
-    fun togglePinnedSubject(id: Long) {
-        viewModelScope.launch {
-            repository.togglePinnedSubject(id)
-        }
-    }
-
     fun createSubject(name: String) {
         viewModelScope.launch {
             val subject = repository.createSubject(name)
@@ -295,6 +289,12 @@ class NoteMasterViewModel(
         viewModelScope.launch {
             repository.updateSubject(id, name)
             messages.emit("Notebook renamed.")
+        }
+    }
+
+    fun toggleSubjectPinned(id: Long) {
+        viewModelScope.launch {
+            repository.toggleSubjectPinned(id)
         }
     }
 

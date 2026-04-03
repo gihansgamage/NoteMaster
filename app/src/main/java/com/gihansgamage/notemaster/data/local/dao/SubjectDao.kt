@@ -10,13 +10,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SubjectDao {
-    @Query("SELECT * FROM subjects ORDER BY name ASC")
+    @Query("SELECT * FROM subjects ORDER BY isPinned DESC, name ASC")
     fun observeAll(): Flow<List<SubjectEntity>>
 
     @Query("SELECT * FROM subjects WHERE id = :id")
     fun observeById(id: Long): Flow<SubjectEntity?>
 
-    @Query("SELECT * FROM subjects ORDER BY name ASC")
+    @Query("SELECT * FROM subjects ORDER BY isPinned DESC, name ASC")
     suspend fun getAll(): List<SubjectEntity>
 
     @Query("SELECT * FROM subjects WHERE name = :name LIMIT 1")
@@ -33,6 +33,9 @@ interface SubjectDao {
 
     @Update
     suspend fun update(subject: SubjectEntity)
+
+    @Query("UPDATE subjects SET isPinned = NOT isPinned WHERE id = :id")
+    suspend fun togglePinned(id: Long)
 
     @Query("DELETE FROM subjects WHERE id = :id")
     suspend fun deleteById(id: Long)
