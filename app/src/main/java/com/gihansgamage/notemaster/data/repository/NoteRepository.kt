@@ -19,6 +19,7 @@ interface NoteRepository {
     suspend fun createSubject(name: String): SubjectEntity
     suspend fun updateSubject(id: Long, name: String)
     suspend fun deleteSubject(id: Long)
+    suspend fun updateAttachmentContent(attachmentId: Long, newContent: String)
     suspend fun ensureSeedData()
     suspend fun deleteAllData()
 }

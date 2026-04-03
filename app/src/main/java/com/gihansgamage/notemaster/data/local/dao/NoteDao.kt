@@ -80,6 +80,9 @@ interface NoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAttachments(attachments: List<AttachmentEntity>)
 
+    @Query("UPDATE attachments SET content = :newContent WHERE id = :attachmentId")
+    suspend fun updateAttachmentContent(attachmentId: Long, newContent: String)
+
     @Query("DELETE FROM note_tag_cross_ref WHERE noteId = :noteId")
     suspend fun deleteTagRefsForNote(noteId: Long)
 

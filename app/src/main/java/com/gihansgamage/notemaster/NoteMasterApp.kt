@@ -174,6 +174,7 @@ fun NoteMasterApp(
                         onNameChange = viewModel::updateUserName,
                         onThemeToggle = viewModel::updateDarkMode,
                         onDeleteAllData = viewModel::deleteAllData,
+                        onVisitWebsite = { openExternally(context, "https://gihansgamage.github.io/NoteMaster-web/") },
                         onBack = { navController.popBackStack() }
                     )
                 }

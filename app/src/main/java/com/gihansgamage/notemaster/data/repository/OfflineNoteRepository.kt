@@ -167,6 +167,10 @@ class OfflineNoteRepository(
         database.subjectDao().deleteById(id)
     }
 
+    override suspend fun updateAttachmentContent(attachmentId: Long, newContent: String) {
+        database.noteDao().updateAttachmentContent(attachmentId, newContent)
+    }
+
     override suspend fun ensureSeedData() {
         if (database.subjectDao().count() == 0) {
             database.subjectDao().insertAll(
