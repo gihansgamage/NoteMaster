@@ -167,10 +167,10 @@ class OfflineNoteRepository(
         if (database.subjectDao().count() == 0) {
             database.subjectDao().insertAll(
                 listOf(
-                    SubjectEntity(name = "Biology", accentColorHex = "#DCEEE7"),
-                    SubjectEntity(name = "History", accentColorHex = "#EFE8DA"),
-                    SubjectEntity(name = "Design", accentColorHex = "#E7E6F4"),
-                    SubjectEntity(name = "Work", accentColorHex = "#DDE7F5"),
+                    SubjectEntity(name = "Biology", accentColorHex = "#A7F3D0"), // Emerald
+                    SubjectEntity(name = "History", accentColorHex = "#FDE68A"), // Amber
+                    SubjectEntity(name = "Design", accentColorHex = "#DDD6FE"),  // Violet
+                    SubjectEntity(name = "Work", accentColorHex = "#BAE6FD"),    // Sky
                 ),
             )
         }
@@ -266,6 +266,16 @@ class OfflineNoteRepository(
     private fun Int.absoluteValue(): Int = if (this < 0) -this else this
 
     private companion object {
-        val palette = listOf("#DCEEE7", "#EFE8DA", "#DDE7F5", "#E6E0F5", "#F1E4E0", "#DDECE8")
+        val palette = listOf(
+            "#C7D2FE", // Indigo
+            "#FECACA", // Rose
+            "#FDE68A", // Amber
+            "#A7F3D0", // Emerald
+            "#BAE6FD", // Sky
+            "#DDD6FE", // Violet
+            "#FED7AA", // Orange
+            "#E9D5FF", // Purple
+            "#FBCFE8"  // Pink
+        )
     }
 }

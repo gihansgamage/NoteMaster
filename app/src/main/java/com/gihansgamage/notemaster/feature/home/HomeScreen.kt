@@ -348,7 +348,7 @@ private fun NotebookSection(
             item {
                 NotebookCard(
                     name = "All Notes",
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     materialCount = notes.sumOf { it.attachments.size },
                     selected = selectedSubjectId == null,
                     onClick = { onSelectSubject(null) }
@@ -387,7 +387,7 @@ private fun NotebookCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else color.copy(alpha = 0.3f)
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else color.copy(alpha = 0.5f)
         ),
         border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
@@ -664,8 +664,8 @@ private fun attachmentLeadIcon(note: NoteDetails) = when {
 
 private fun String?.toColorOrFallback(): Color {
     return runCatching {
-        Color(parseColor(this ?: "#EAE6DE"))
-    }.getOrDefault(Color(0xFFEAE6DE))
+        Color(parseColor(this ?: "#F1F5F9"))
+    }.getOrDefault(Color(0xFFF1F5F9))
 }
 
 private fun getGreeting(name: String): String {
