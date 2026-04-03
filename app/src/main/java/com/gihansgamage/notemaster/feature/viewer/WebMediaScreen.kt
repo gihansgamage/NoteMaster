@@ -5,22 +5,30 @@ import android.net.Uri
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +47,7 @@ fun WebMediaScreen(
     title: String,
     encodedUrl: String,
     onBack: () -> Unit,
+    onOpenExternal: (String) -> Unit,
 ) {
     val rawUrl = LinkClassifier.normalizeUrl(Uri.decode(encodedUrl))
     val displayTitle = Uri.decode(title).ifBlank { "Web viewer" }
@@ -50,7 +59,17 @@ fun WebMediaScreen(
         topBar = {
             ViewerHeader(
                 title = displayTitle,
-                onBack = onBack
+                onBack = onBack,
+                actions = {
+                    IconButton(onClick = { onOpenExternal(rawUrl) }) {
+                        Icon(
+                            imageVector = Icons.Rounded.OpenInNew,
+                            contentDescription = "Open in Browser",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -107,7 +126,8 @@ fun WebMediaScreen(
 @Composable
 private fun ViewerHeader(
     title: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -131,5 +151,11 @@ private fun ViewerHeader(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).padding(start = 8.dp)
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            actions()
+        }
     }
 }

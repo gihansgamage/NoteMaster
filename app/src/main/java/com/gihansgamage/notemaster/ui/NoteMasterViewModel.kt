@@ -87,14 +87,19 @@ class NoteMasterViewModel(
         selectedSubjectId,
         searchQuery,
     ) { notes, subjectsList, selectedId, query ->
-        val filtered = notes.filter { note ->
+        val filteredNotes = notes.filter { note ->
             val subjectMatches = selectedId == null || note.subject?.id == selectedId
             val textMatches = query.isBlank() || buildSearchableText(note).contains(query.trim(), ignoreCase = true)
             subjectMatches && textMatches
         }
+        val filteredSubjects = if (query.isBlank()) {
+            subjectsList.sortedWith(compareByDescending<SubjectEntity> { it.isPinned }.thenBy { it.name })
+        } else {
+            subjectsList.filter { it.name.contains(query.trim(), ignoreCase = true) }
+        }
         HomeUiState(
-            notes = filtered,
-            subjects = subjectsList,
+            notes = filteredNotes,
+            subjects = filteredSubjects,
             selectedSubjectId = selectedId,
             searchQuery = query,
         )
@@ -262,6 +267,12 @@ class NoteMasterViewModel(
     fun togglePinned(noteId: Long) {
         viewModelScope.launch {
             repository.togglePinned(noteId)
+        }
+    }
+
+    fun togglePinnedSubject(id: Long) {
+        viewModelScope.launch {
+            repository.togglePinnedSubject(id)
         }
     }
 

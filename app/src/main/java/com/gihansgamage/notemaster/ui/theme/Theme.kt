@@ -35,15 +35,17 @@ private val LightColors = lightColorScheme(
 private val DarkColors = darkColorScheme(
     primary = Sage,
     onPrimary = SlateTextPrimary,
-    primaryContainer = Cloud,         // FAB Background in Dark Mode (Swapping to Light Colors)
-    onPrimaryContainer = IndigoPrimary, // FAB Icon in Dark Mode (Swapping to Dark Color)
+    primaryContainer = Cloud,
+    onPrimaryContainer = IndigoPrimary,
     secondary = Clay,
     onSecondary = Cloud,
     tertiary = Linen,
     background = Color(0xFF0F172A),
-    surface = Color(0xFF1E293B),
+    surface = Color(0xFF0F172A),            // Matched background for seamless look
+    surfaceVariant = Color(0xFF1E293B),     // Slightly lighter for nested containers
     onBackground = Color(0xFFF1F5F9),
     onSurface = Color(0xFFF1F5F9),
+    surfaceTint = Color.Transparent         // Disable elevation tint in dark mode
 )
 
 @Composable

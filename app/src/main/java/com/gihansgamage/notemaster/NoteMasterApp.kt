@@ -127,6 +127,7 @@ fun NoteMasterApp(
                         onCreateSubject = viewModel::createSubject,
                         onDeleteSubject = viewModel::deleteSubject,
                         onRenameSubject = viewModel::updateSubject,
+                        onTogglePinnedSubject = viewModel::togglePinnedSubject,
                     )
                 }
 
@@ -360,6 +361,7 @@ fun NoteMasterApp(
                         title = backStackEntry.arguments?.getString("title").orEmpty(),
                         encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
                         onBack = { navController.popBackStack() },
+                        onOpenExternal = { url -> openExternally(context, url) }
                     )
                 }
 
@@ -436,7 +438,8 @@ fun NoteMasterApp(
                     WebMediaScreen(
                         title = backStackEntry.arguments?.getString("title").orEmpty(),
                         encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onOpenExternal = { url -> openExternally(context, url) }
                     )
                 }
 
@@ -450,7 +453,8 @@ fun NoteMasterApp(
                     com.gihansgamage.notemaster.feature.viewer.YouTubeViewerScreen(
                         title = backStackEntry.arguments?.getString("title").orEmpty(),
                         encodedUrl = backStackEntry.arguments?.getString("url").orEmpty(),
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onOpenExternal = { url -> openExternally(context, url) }
                     )
                 }
             }

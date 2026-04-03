@@ -24,6 +24,7 @@ data class SubjectEntity(
     val id: Long = 0,
     val name: String,
     val accentColorHex: String,
+    val isPinned: Boolean = false,
 )
 
 @Entity(

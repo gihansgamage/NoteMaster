@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,6 +56,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -95,6 +98,7 @@ fun HomeScreen(
     onCreateSubject: (String) -> Unit,
     onDeleteSubject: (Long) -> Unit,
     onRenameSubject: (Long, String) -> Unit,
+    onTogglePinnedSubject: (Long) -> Unit,
 ) {
     var showSubjectDialog by remember { mutableStateOf(false) }
     var subjectToRename by remember { mutableStateOf<com.gihansgamage.notemaster.data.local.entity.SubjectEntity?>(null) }
@@ -158,6 +162,9 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
+        val isSearching = uiState.searchQuery.isNotBlank()
+        val pinnedNotes = uiState.notes.filter { it.isPinned }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -176,63 +183,143 @@ fun HomeScreen(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = onSearchChange,
-                    label = { Text("Search notes, tags, or summaries") },
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                    placeholder = { 
+                        Text(
+                            "Search notes, tags, or summaries",
+                            style = MaterialTheme.typography.bodyMedium
+                        ) 
+                    },
+                    leadingIcon = { 
+                        Icon(
+                            Icons.Rounded.Search, 
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        ) 
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(52.dp)
                         .padding(horizontal = 20.dp),
                     singleLine = true,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color.Transparent,
+                    ),
+                    trailingIcon = {
+                        if (isSearching) {
+                            IconButton(onClick = { onSearchChange("") }) {
+                                Icon(Icons.Rounded.Delete, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
                 )
             }
 
-            item {
-                NotebookSection(
-                    subjects = uiState.subjects,
-                    notes = uiState.notes,
-                    selectedSubjectId = uiState.selectedSubjectId,
-                    onSelectSubject = onSelectSubject,
-                    onCreateSubject = { showSubjectDialog = true },
-                    onDeleteSubject = { subjectToDelete = it },
-                    onRenameSubject = { subjectToRename = it }
-                )
-            }
+            if (isSearching) {
+                // --- SEARCH RESULTS VIEW ---
+                if (uiState.subjects.isNotEmpty()) {
+                    item {
+                        NotebookSection(
+                            subjects = uiState.subjects,
+                            notes = uiState.notes,
+                            selectedSubjectId = uiState.selectedSubjectId,
+                            onSelectSubject = onSelectSubject,
+                            onTogglePinnedSubject = onTogglePinnedSubject,
+                            onCreateSubject = { showSubjectDialog = true },
+                            onDeleteSubject = { subjectToDelete = it },
+                            onRenameSubject = { subjectToRename = it }
+                        )
+                    }
+                }
 
-            val pinnedNotes = uiState.notes.filter { it.isPinned }
-            
-            item {
-                HeroSection(
-                    noteCount = uiState.notes.size,
-                    subjectCount = uiState.subjects.size,
-                )
-            }
-
-            item {
-                Text(
-                    text = "Pinned Materials",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-            }
-
-            if (pinnedNotes.isEmpty()) {
                 item {
-                    val hasUnpinnedNotes = uiState.notes.isNotEmpty()
-                    EmptyNotesCard(
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                        hasUnpinnedNotes = hasUnpinnedNotes
+                    Text(
+                        text = "Matching Materials",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                 }
+
+                if (uiState.notes.isEmpty() && uiState.subjects.isEmpty()) {
+                    item {
+                        EmptyNotesCard(
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            hasUnpinnedNotes = false // Use properties to show appropriate message
+                        )
+                    }
+                } else if (uiState.notes.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No materials match this search.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        )
+                    }
+                } else {
+                    items(uiState.notes, key = { it.id }) { note ->
+                        NoteCard(
+                            note = note,
+                            onOpen = { onOpenNote(note.id) },
+                            onEdit = { onEditNote(note.id) },
+                            onTogglePinned = { onTogglePinned(note.id) },
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                        )
+                    }
+                }
             } else {
-                items(pinnedNotes, key = { it.id }) { note ->
-                    NoteCard(
-                        note = note,
-                        onOpen = { onOpenNote(note.id) },
-                        onEdit = { onEditNote(note.id) },
-                        onTogglePinned = { onTogglePinned(note.id) },
-                        modifier = Modifier.padding(horizontal = 20.dp),
+                // --- NORMAL VIEW ---
+                item {
+                    NotebookSection(
+                        subjects = uiState.subjects,
+                        notes = uiState.notes,
+                        selectedSubjectId = uiState.selectedSubjectId,
+                        onSelectSubject = onSelectSubject,
+                        onTogglePinnedSubject = onTogglePinnedSubject,
+                        onCreateSubject = { showSubjectDialog = true },
+                        onDeleteSubject = { subjectToDelete = it },
+                        onRenameSubject = { subjectToRename = it }
                     )
+                }
+
+                item {
+                    HeroSection(
+                        materialCount = uiState.notes.sumOf { it.attachments.size },
+                        subjectCount = uiState.subjects.size,
+                    )
+                }
+
+                item {
+                    Text(
+                        text = "Pinned Materials",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                }
+
+                if (pinnedNotes.isEmpty()) {
+                    item {
+                        val hasUnpinnedNotes = uiState.notes.isNotEmpty()
+                        EmptyNotesCard(
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            hasUnpinnedNotes = hasUnpinnedNotes
+                        )
+                    }
+                } else {
+                    items(pinnedNotes, key = { it.id }) { note ->
+                        NoteCard(
+                            note = note,
+                            onOpen = { onOpenNote(note.id) },
+                            onEdit = { onEditNote(note.id) },
+                            onTogglePinned = { onTogglePinned(note.id) },
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                        )
+                    }
                 }
             }
         }
@@ -241,7 +328,7 @@ fun HomeScreen(
 
 @Composable
 private fun HeroSection(
-    noteCount: Int,
+    materialCount: Int,
     subjectCount: Int,
 ) {
     Card(
@@ -252,6 +339,8 @@ private fun HeroSection(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -267,7 +356,7 @@ private fun HeroSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatPill(label = "$noteCount notes")
+                StatPill(label = "$materialCount materials")
                 StatPill(label = "$subjectCount subjects")
             }
         }
@@ -294,6 +383,7 @@ private fun NotebookSection(
     notes: List<com.gihansgamage.notemaster.data.model.NoteDetails>,
     selectedSubjectId: Long?,
     onSelectSubject: (Long?) -> Unit,
+    onTogglePinnedSubject: (Long) -> Unit,
     onCreateSubject: () -> Unit,
     onDeleteSubject: (com.gihansgamage.notemaster.data.local.entity.SubjectEntity) -> Unit,
     onRenameSubject: (com.gihansgamage.notemaster.data.local.entity.SubjectEntity) -> Unit,
@@ -344,9 +434,11 @@ private fun NotebookSection(
                     color = subject.accentColorHex.toColorOrFallback(),
                     materialCount = notes.filter { it.subject?.id == subject.id }.sumOf { it.attachments.size },
                     selected = selectedSubjectId == subject.id,
+                    isPinned = subject.isPinned,
                     onClick = { onSelectSubject(subject.id) },
                     onDelete = { onDeleteSubject(subject) },
-                    onRename = { onRenameSubject(subject) }
+                    onRename = { onRenameSubject(subject) },
+                    onTogglePinned = { onTogglePinnedSubject(subject.id) }
                 )
             }
         }
@@ -359,9 +451,11 @@ private fun NotebookCard(
     color: Color,
     materialCount: Int,
     selected: Boolean,
+    isPinned: Boolean = false,
     onClick: () -> Unit,
     onDelete: (() -> Unit)? = null,
     onRename: (() -> Unit)? = null,
+    onTogglePinned: (() -> Unit)? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -417,6 +511,22 @@ private fun NotebookCard(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
+                            if (onTogglePinned != null) {
+                                DropdownMenuItem(
+                                    text = { Text(if (isPinned) "Unpin from Top" else "Pin to Top") },
+                                    onClick = {
+                                        showMenu = false
+                                        onTogglePinned()
+                                    },
+                                    leadingIcon = { 
+                                        Icon(
+                                            if (isPinned) Icons.Outlined.PushPin else Icons.Rounded.PushPin, 
+                                            contentDescription = null, 
+                                            modifier = Modifier.size(18.dp)
+                                        ) 
+                                    }
+                                )
+                            }
                             if (onRename != null) {
                                 DropdownMenuItem(
                                     text = { Text("Rename") },
@@ -442,13 +552,24 @@ private fun NotebookCard(
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (isPinned) {
+                    Icon(
+                        Icons.Rounded.PushPin,
+                        contentDescription = "Pinned",
+                        modifier = Modifier.size(14.dp).padding(top = 2.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Text(
                 text = "$materialCount Materials",
                 style = MaterialTheme.typography.labelMedium,
@@ -472,6 +593,8 @@ private fun NoteCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier

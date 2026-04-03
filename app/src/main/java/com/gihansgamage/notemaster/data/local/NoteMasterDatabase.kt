@@ -22,7 +22,7 @@ import com.gihansgamage.notemaster.data.local.entity.TagEntity
         NoteTagCrossRef::class,
         AttachmentEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

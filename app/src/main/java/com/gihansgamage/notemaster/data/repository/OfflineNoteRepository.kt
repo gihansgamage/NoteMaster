@@ -127,6 +127,13 @@ class OfflineNoteRepository(
         database.noteDao().togglePinned(noteId = noteId)
     }
 
+    override suspend fun togglePinnedSubject(id: Long) {
+        val subject = database.subjectDao().getAll().find { it.id == id }
+        if (subject != null) {
+            database.subjectDao().update(subject.copy(isPinned = !subject.isPinned))
+        }
+    }
+
     override suspend fun createSubject(name: String): SubjectEntity {
         val normalized = name.trim()
         require(normalized.isNotEmpty()) { "Subject name cannot be blank." }
@@ -137,6 +144,7 @@ class OfflineNoteRepository(
             SubjectEntity(
                 name = normalized,
                 accentColorHex = palette[(normalized.hashCode().absoluteValue()) % palette.size],
+                isPinned = false,
             ),
         )
 
@@ -145,6 +153,7 @@ class OfflineNoteRepository(
                 id = insertedId,
                 name = normalized,
                 accentColorHex = palette[(normalized.hashCode().absoluteValue()) % palette.size],
+                isPinned = false,
             )
         } else {
             database.subjectDao().findByName(normalized)
