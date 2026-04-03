@@ -14,7 +14,7 @@ object LinkClassifier {
 
     fun toYouTubeEmbedUrl(url: String): String? {
         return extractYouTubeId(normalizeUrl(url))?.let { videoId ->
-            "https://www.youtube.com/embed/$videoId"
+            "https://www.youtube.com/embed/$videoId?controls=1&playsinline=1&rel=0"
         }
     }
 
