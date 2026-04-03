@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

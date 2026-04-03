@@ -11,6 +11,7 @@ import com.gihansgamage.notemaster.data.repository.NoteRepository
 import com.gihansgamage.notemaster.data.repository.UserPreferencesRepository
 import com.gihansgamage.notemaster.domain.summary.NoteSummarizer
 import com.gihansgamage.notemaster.domain.toc.TocService
+import com.gihansgamage.notemaster.feature.viewer.AudioPlaybackManager
 import com.gihansgamage.notemaster.util.LinkClassifier
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,6 +50,7 @@ class NoteMasterViewModel(
     private val repository: NoteRepository,
     private val preferencesRepository: UserPreferencesRepository,
     private val summarizer: NoteSummarizer,
+    private val audioPlaybackManager: AudioPlaybackManager,
     private val tocService: TocService = TocService(),
 ) : ViewModel() {
 
@@ -71,6 +73,8 @@ class NoteMasterViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
+
+    val playbackState = audioPlaybackManager.state
 
     val suggestedTags: StateFlow<List<String>> = combine(
         editorDraft,
@@ -317,12 +321,26 @@ class NoteMasterViewModel(
         }
     }
 
+    fun updateTextMaterial(attachmentId: Long, content: String) {
+        viewModelScope.launch {
+            repository.updateAttachmentContent(attachmentId, content)
+            messages.emit("Text material updated.")
+        }
+    }
+
     fun deleteAllData() {
         viewModelScope.launch {
             repository.deleteAllData()
             messages.emit("All data deleted.")
         }
     }
+
+    // Audio Playback
+    fun playAudio(title: String, uri: String) = audioPlaybackManager.play(title, uri)
+    fun toggleAudio() = audioPlaybackManager.togglePlayPause()
+    fun stopAudio() = audioPlaybackManager.stop()
+    fun seekAudio(position: Long) = audioPlaybackManager.seekTo(position)
+    fun setAudioSpeed(speed: Float) = audioPlaybackManager.setPlaybackSpeed(speed)
 
     fun noteDetails(id: Long): Flow<NoteDetails?> = repository.observeNote(id)
 
@@ -349,5 +367,10 @@ class NoteMasterViewModel(
             .map { it.removePrefix("#").trim().lowercase() }
             .filter { it.isNotBlank() }
             .distinct()
+    }
+
+    override fun onCleared() {
+        audioPlaybackManager.release()
+        super.onCleared()
     }
 }

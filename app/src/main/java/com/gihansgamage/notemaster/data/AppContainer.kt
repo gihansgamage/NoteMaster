@@ -7,6 +7,7 @@ import com.gihansgamage.notemaster.data.repository.OfflineNoteRepository
 import com.gihansgamage.notemaster.data.repository.UserPreferencesRepository
 import com.gihansgamage.notemaster.domain.summary.HeuristicNoteSummarizer
 import com.gihansgamage.notemaster.domain.summary.NoteSummarizer
+import com.gihansgamage.notemaster.feature.viewer.AudioPlaybackManager
 
 class AppContainer(context: Context) {
     private val database: NoteMasterDatabase by lazy {
@@ -26,5 +27,9 @@ class AppContainer(context: Context) {
 
     val userPreferencesRepository: UserPreferencesRepository by lazy {
         UserPreferencesRepository(context)
+    }
+
+    val audioPlaybackManager: AudioPlaybackManager by lazy {
+        AudioPlaybackManager(context)
     }
 }

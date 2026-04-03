@@ -24,6 +24,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.gihansgamage.notemaster.data.local.entity.AttachmentType
 import com.gihansgamage.notemaster.data.model.NoteDetails
@@ -35,14 +36,23 @@ import com.gihansgamage.notemaster.feature.viewer.VideoViewerScreen
 import com.gihansgamage.notemaster.feature.viewer.WebMediaScreen
 import com.gihansgamage.notemaster.feature.viewer.TextViewerScreen
 import com.gihansgamage.notemaster.feature.viewer.ImageViewerScreen
+import com.gihansgamage.notemaster.feature.subject.SubjectDetailScreen
+import com.gihansgamage.notemaster.feature.viewer.AudioPlayerScreen
+import com.gihansgamage.notemaster.feature.viewer.BottomAudioBar
 import com.gihansgamage.notemaster.ui.AppViewModelProvider
 import com.gihansgamage.notemaster.ui.NoteMasterViewModel
 import com.gihansgamage.notemaster.ui.theme.NoteMasterTheme
 import kotlinx.coroutines.flow.collectLatest
-import com.gihansgamage.notemaster.feature.subject.SubjectDetailScreen
-import com.gihansgamage.notemaster.feature.viewer.AudioPlayerScreen
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import kotlin.OptIn
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 private object Destination {
     const val Home = "home"
@@ -53,7 +63,7 @@ private object Destination {
     const val Web = "web?title={title}&url={url}"
     const val Audio = "audio?title={title}&uri={uri}"
     const val Image = "image?title={title}&uri={uri}"
-    const val Text = "text?title={title}&content={content}"
+    const val Text = "text?title={title}&content={content}&attachmentId={attachmentId}"
     const val YouTube = "viewer/youtube?title={title}&url={url}"
     const val SubjectDetail = "subject_detail/{subjectId}"
     const val Welcome = "welcome"
@@ -65,7 +75,8 @@ private object Destination {
     fun web(title: String, url: String): String = "web?title=${Uri.encode(title)}&url=${Uri.encode(url)}"
     fun audio(title: String, uri: String): String = "audio?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
     fun image(title: String, uri: String): String = "image?title=${Uri.encode(title)}&uri=${Uri.encode(uri)}"
-    fun text(title: String, content: String): String = "text?title=${Uri.encode(title)}&content=${Uri.encode(content)}"
+    fun text(title: String, content: String, attachmentId: Long? = null): String = 
+        "text?title=${Uri.encode(title)}&content=${Uri.encode(content)}&attachmentId=${attachmentId ?: -1L}"
     fun youtube(title: String, url: String): String = "viewer/youtube?title=${Uri.encode(title)}&url=${Uri.encode(url)}"
     fun subjectDetail(subjectId: Long): String = "subject_detail/$subjectId"
 }
@@ -80,6 +91,31 @@ fun NoteMasterApp(
     val editorUiState by viewModel.editorUiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+    
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (!isGranted) {
+                viewModel.userMessages
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val isGranted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!isGranted) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.userMessages.collectLatest { message ->
@@ -256,7 +292,7 @@ fun NoteMasterApp(
 
                                 AttachmentType.TEXT -> {
                                     if (attachment.content != null) {
-                                        navController.navigate(Destination.text(attachment.title, attachment.content))
+                                        navController.navigate(Destination.text(attachment.title, attachment.content, attachment.localId.toLongOrNull()))
                                     } else {
                                         attachment.uri?.let { openExternally(context, it) }
                                     }
@@ -265,7 +301,10 @@ fun NoteMasterApp(
                                 else -> Unit
                             }
                         },
-                        getToc = viewModel::getToc
+                        getToc = viewModel::getToc,
+                        playbackState = playbackState,
+                        onPlayAudio = viewModel::playAudio,
+                        onToggleAudio = viewModel::toggleAudio
                     )
                 }
 
@@ -343,7 +382,10 @@ fun NoteMasterApp(
                             viewModel.startNewNote()
                             viewModel.selectSubject(subjectId)
                             navController.navigate(Destination.editor())
-                        }
+                        },
+                        playbackState = playbackState,
+                        onPlayAudio = viewModel::playAudio,
+                        onToggleAudio = viewModel::toggleAudio
                     )
                 }
 
@@ -396,6 +438,11 @@ fun NoteMasterApp(
                     AudioPlayerScreen(
                         title = backStackEntry.arguments?.getString("title").orEmpty(),
                         encodedUri = backStackEntry.arguments?.getString("uri").orEmpty(),
+                        playbackState = playbackState,
+                        onPlay = viewModel::playAudio,
+                        onToggle = viewModel::toggleAudio,
+                        onSeek = viewModel::seekAudio,
+                        onSetSpeed = viewModel::setAudioSpeed,
                         onBack = { navController.popBackStack() },
                     )
                 }
@@ -419,12 +466,22 @@ fun NoteMasterApp(
                     arguments = listOf(
                         navArgument("title") { type = NavType.StringType },
                         navArgument("content") { type = NavType.StringType },
+                        navArgument("attachmentId") { 
+                            type = NavType.LongType
+                            defaultValue = -1L
+                        },
                     ),
                 ) { backStackEntry ->
+                    val attachmentId = backStackEntry.arguments?.getLong("attachmentId") ?: -1L
                     TextViewerScreen(
                         title = backStackEntry.arguments?.getString("title").orEmpty(),
                         content = backStackEntry.arguments?.getString("content").orEmpty(),
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onSave = { newContent ->
+                            if (attachmentId != -1L) {
+                                viewModel.updateTextMaterial(attachmentId, newContent)
+                            }
+                        }
                     )
                 }
 
@@ -458,6 +515,24 @@ fun NoteMasterApp(
                     )
                 }
             }
+
+            val isAudioScreen = currentRoute?.startsWith("audio") == true
+            
+            BottomAudioBar(
+                state = playbackState.copy(isActive = playbackState.isActive && !isAudioScreen),
+                onToggle = viewModel::toggleAudio,
+                onClose = viewModel::stopAudio,
+                onSetSpeed = viewModel::setAudioSpeed,
+                isDark = userPreferences.isDarkMode ?: isSystemInDarkTheme(),
+                onClick = {
+                    if (playbackState.isActive) {
+                        navController.navigate(Destination.audio(playbackState.currentTitle, playbackState.currentUri))
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 80.dp) // Above snackbar
+            )
 
             SnackbarHost(
                 hostState = snackbarHostState,

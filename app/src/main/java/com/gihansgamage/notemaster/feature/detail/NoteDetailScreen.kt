@@ -92,6 +92,9 @@ fun NoteDetailScreen(
     onShare: (NoteDetails) -> Unit,
     onOpenAttachment: (AttachmentDraft) -> Unit,
     getToc: (String) -> List<TocEntry>,
+    playbackState: com.gihansgamage.notemaster.feature.viewer.PlaybackState,
+    onPlayAudio: (String, String) -> Unit,
+    onToggleAudio: () -> Unit,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     val scrollState = rememberLazyListState()
@@ -204,7 +207,12 @@ fun NoteDetailScreen(
                 items(note.attachments, key = { it.localId }) { attachment ->
                     when (attachment.type) {
                         AttachmentType.IMAGE -> ImageAttachmentCard(attachment = attachment)
-                        AttachmentType.AUDIO -> AudioAttachmentCard(attachment = attachment)
+                        AttachmentType.AUDIO -> AudioAttachmentCard(
+                            attachment = attachment,
+                            playbackState = playbackState,
+                            onPlay = onPlayAudio,
+                            onToggle = onToggleAudio,
+                        )
                         AttachmentType.PDF,
                         AttachmentType.VIDEO,
                         AttachmentType.WEB_LINK,
@@ -257,7 +265,7 @@ private fun NoteHeader(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 4.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
@@ -323,7 +331,9 @@ private fun MetaCard(note: NoteDetails) {
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
@@ -369,7 +379,9 @@ private fun SectionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -388,7 +400,7 @@ private fun AttachmentActionCard(
     onOpen: () -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
@@ -396,7 +408,9 @@ private fun AttachmentActionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -448,13 +462,17 @@ private fun ImageAttachmentCard(attachment: AttachmentDraft) {
     }
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -479,27 +497,26 @@ private fun ImageAttachmentCard(attachment: AttachmentDraft) {
 }
 
 @Composable
-private fun AudioAttachmentCard(attachment: AttachmentDraft) {
-    val context = LocalContext.current
-    var player by remember { mutableStateOf<MediaPlayer?>(null) }
-    var isPrepared by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(false) }
-
-    DisposableEffect(attachment.uri) {
-        onDispose {
-            player?.release()
-            player = null
-        }
-    }
+private fun AudioAttachmentCard(
+    attachment: AttachmentDraft,
+    playbackState: com.gihansgamage.notemaster.feature.viewer.PlaybackState,
+    onPlay: (String, String) -> Unit,
+    onToggle: () -> Unit,
+) {
+    val isThisPlaying = playbackState.currentUri == attachment.uri && playbackState.isActive
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -510,7 +527,7 @@ private fun AudioAttachmentCard(attachment: AttachmentDraft) {
                         style = MaterialTheme.typography.titleLarge,
                     )
                     Text(
-                        text = "Audio attachment",
+                        text = if (isThisPlaying && playbackState.isPlaying) "Playing now" else "Audio attachment",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -518,36 +535,18 @@ private fun AudioAttachmentCard(attachment: AttachmentDraft) {
             }
             Button(
                 onClick = {
-                    val existingPlayer = player
-                    if (existingPlayer == null) {
-                        val uri = attachment.uri?.let(Uri::parse) ?: return@Button
-                        val mediaPlayer = MediaPlayer().apply {
-                            setDataSource(context, uri)
-                            setOnPreparedListener {
-                                isPrepared = true
-                                it.start()
-                                isPlaying = true
-                            }
-                            setOnCompletionListener {
-                                isPlaying = false
-                            }
-                            prepareAsync()
-                        }
-                        player = mediaPlayer
-                    } else if (isPrepared && existingPlayer.isPlaying) {
-                        existingPlayer.pause()
-                        isPlaying = false
-                    } else if (isPrepared) {
-                        existingPlayer.start()
-                        isPlaying = true
+                    if (isThisPlaying) {
+                        onToggle()
+                    } else {
+                        attachment.uri?.let { onPlay(attachment.title, it) }
                     }
                 },
             ) {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
+                    imageVector = if (isThisPlaying && playbackState.isPlaying) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
                     contentDescription = null,
                 )
-                Text(if (isPlaying) "Pause audio" else "Play audio")
+                Text(if (isThisPlaying && playbackState.isPlaying) "Pause audio" else "Play audio")
             }
         }
     }

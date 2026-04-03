@@ -13,6 +13,7 @@ object AppViewModelProvider {
                 repository = application.container.noteRepository,
                 preferencesRepository = application.container.userPreferencesRepository,
                 summarizer = application.container.noteSummarizer,
+                audioPlaybackManager = application.container.audioPlaybackManager,
             )
         }
     }
