@@ -1,5 +1,6 @@
 package com.gihansgamage.notemaster.data.local.entity
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -15,9 +16,13 @@ enum class AttachmentType {
     YOUTUBE,
 }
 
+@Immutable
 @Entity(
     tableName = "subjects",
-    indices = [Index(value = ["name"], unique = true)],
+    indices = [
+        Index("name"),
+        Index("isPinned")
+    ]
 )
 data class SubjectEntity(
     @PrimaryKey(autoGenerate = true)

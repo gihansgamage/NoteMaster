@@ -1,8 +1,11 @@
 package com.gihansgamage.notemaster.data.model
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.gihansgamage.notemaster.data.local.entity.AttachmentType
 import com.gihansgamage.notemaster.data.local.entity.SubjectEntity
 
+@Immutable
 data class AttachmentDraft(
     val localId: String,
     val title: String,
@@ -13,6 +16,7 @@ data class AttachmentDraft(
     val content: String? = null,
 )
 
+@Stable
 data class EditableNote(
     val id: Long? = null,
     val title: String = "",
@@ -23,6 +27,7 @@ data class EditableNote(
     val isPinned: Boolean = false,
 )
 
+@Immutable
 data class NoteDetails(
     val id: Long,
     val title: String,
