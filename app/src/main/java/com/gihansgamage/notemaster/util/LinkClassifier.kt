@@ -24,25 +24,14 @@ object LinkClassifier {
         return if ("://" in cleanUrl) cleanUrl else "https://$cleanUrl"
     }
 
+    private val youtubeRegex = Regex(
+        "^.*(youtu.be/|v/|u/\\w/|embed/|watch\\?v=|&v=)([^#&?]*).*",
+        RegexOption.IGNORE_CASE
+    )
+
     fun extractYouTubeId(url: String): String? {
-        return runCatching {
-            val uri = Uri.parse(url)
-            val host = uri.host?.lowercase().orEmpty()
-            
-            when {
-                // Handle youtu.be/VIDEO_ID
-                host.contains("youtu.be") -> uri.pathSegments.firstOrNull()
-                
-                // Handle youtube.com (m.youtube.com, etc.)
-                host.contains("youtube.com") -> {
-                    val segments = uri.pathSegments
-                    when (segments.firstOrNull()) {
-                        "shorts", "embed", "live", "v" -> segments.getOrNull(1)
-                        else -> uri.getQueryParameter("v")
-                    }
-                }
-                else -> null
-            }
-        }.getOrNull()?.takeIf { it.isNotBlank() }
+        val matchResult = youtubeRegex.find(url)
+        val id = matchResult?.groupValues?.get(2)
+        return id?.takeIf { it.length == 11 }
     }
 }

@@ -77,6 +77,7 @@ import com.gihansgamage.notemaster.data.model.AttachmentDraft
 import com.gihansgamage.notemaster.data.model.NoteDetails
 import com.gihansgamage.notemaster.domain.toc.TocEntry
 import com.gihansgamage.notemaster.util.formatDateTime
+import com.gihansgamage.notemaster.ui.components.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -206,20 +207,28 @@ fun NoteDetailScreen(
 
                 items(note.attachments, key = { it.localId }) { attachment ->
                     when (attachment.type) {
-                        AttachmentType.IMAGE -> ImageAttachmentCard(attachment = attachment)
+                        AttachmentType.IMAGE -> ImagePreview(
+                            attachment = attachment,
+                            onOpen = { onOpenAttachment(attachment) }
+                        )
                         AttachmentType.AUDIO -> AudioAttachmentCard(
                             attachment = attachment,
                             playbackState = playbackState,
                             onPlay = onPlayAudio,
                             onToggle = onToggleAudio,
                         )
-                        AttachmentType.PDF,
-                        AttachmentType.VIDEO,
+                        AttachmentType.PDF -> PdfPreview(
+                            attachment = attachment,
+                            onOpen = { onOpenAttachment(attachment) }
+                        )
+                        AttachmentType.VIDEO, AttachmentType.YOUTUBE -> VideoPreview(
+                            attachment = attachment,
+                            onOpen = { onOpenAttachment(attachment) }
+                        )
                         AttachmentType.WEB_LINK,
-                        AttachmentType.YOUTUBE,
                         AttachmentType.TEXT -> AttachmentActionCard(
                             attachment = attachment,
-                            onOpen = { onOpenAttachment(attachment) },
+                            onOpen = { onOpenAttachment(attachment) }
                         )
                     }
                 }
@@ -452,49 +461,6 @@ private fun AttachmentActionCard(
     }
 }
 
-@Composable
-private fun ImageAttachmentCard(attachment: AttachmentDraft) {
-    val context = LocalContext.current
-    val bitmap by produceState<Bitmap?>(initialValue = null, attachment.uri) {
-        value = withContext(Dispatchers.IO) {
-            attachment.uri?.let { decodeBitmap(context, Uri.parse(it)) }
-        }
-    }
-
-    Card(
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = attachment.title,
-                style = MaterialTheme.typography.titleLarge,
-            )
-            bitmap?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = attachment.title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 180.dp, max = 260.dp),
-                )
-            } ?: Text(
-                text = "Image preview unavailable.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 @Composable
 private fun AudioAttachmentCard(
@@ -552,14 +518,3 @@ private fun AudioAttachmentCard(
     }
 }
 
-private fun decodeBitmap(context: android.content.Context, uri: Uri): Bitmap? {
-    return runCatching {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
-        } else {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                BitmapFactory.decodeStream(stream)
-            }
-        }
-    }.getOrNull()
-}
