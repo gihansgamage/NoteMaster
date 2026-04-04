@@ -262,7 +262,7 @@ private fun AppNavHost(
                         AttachmentType.PDF -> attachment.uri?.let { navController.navigate(Destination.pdf(attachment.title, it)) }
                         AttachmentType.VIDEO -> attachment.uri?.let { navController.navigate(Destination.video(attachment.title, it)) }
                         AttachmentType.WEB_LINK -> attachment.linkUrl?.let { navController.navigate(Destination.web(attachment.title, it)) }
-                        AttachmentType.YOUTUBE -> attachment.linkUrl?.let { navController.navigate(Destination.web(attachment.title, it)) }
+                        AttachmentType.YOUTUBE -> attachment.linkUrl?.let { navController.navigate(Destination.youtube(attachment.title, it)) }
                         AttachmentType.AUDIO -> attachment.uri?.let { navController.navigate(Destination.audio(attachment.title, it)) }
                         AttachmentType.IMAGE -> attachment.uri?.let { navController.navigate(Destination.image(attachment.title, it)) }
                         AttachmentType.TEXT -> {

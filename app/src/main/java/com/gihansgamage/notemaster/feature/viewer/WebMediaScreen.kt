@@ -90,34 +90,8 @@ fun WebMediaScreen(
                 }
             },
             update = { webView ->
-                if (isYouTubeVideo) {
-                    val html = """
-                        <!doctype html>
-                        <html>
-                        <head>
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-                            <style>
-                                html, body { margin: 0; padding: 0; background: black; height: 100%; }
-                                iframe { border: 0; width: 100%; height: 100%; }
-                            </style>
-                        </head>
-                        <body>
-                            <iframe
-                                src="$targetUrl"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowfullscreen>
-                            </iframe>
-                        </body>
-                        </html>
-                    """.trimIndent()
-
-                    val htmlHash = html.hashCode().toString()
-                    if (webView.tag != htmlHash) {
-                        webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
-                        webView.tag = htmlHash
-                    }
-                } else if (webView.url != targetUrl) {
-                    webView.loadUrl(targetUrl)
+                if (webView.url != rawUrl) {
+                    webView.loadUrl(rawUrl)
                 }
             },
         )

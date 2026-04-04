@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import com.gihansgamage.notemaster.data.local.entity.AttachmentType
 import com.gihansgamage.notemaster.data.model.AttachmentDraft
 import com.gihansgamage.notemaster.data.model.NoteDetails
+import com.gihansgamage.notemaster.feature.home.components.icon
 import com.gihansgamage.notemaster.domain.toc.TocEntry
 import com.gihansgamage.notemaster.util.formatDateTime
 import com.gihansgamage.notemaster.ui.components.*
@@ -424,14 +425,7 @@ private fun AttachmentActionCard(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(
-                    imageVector = when (attachment.type) {
-                        AttachmentType.PDF -> Icons.Rounded.PictureAsPdf
-                        AttachmentType.VIDEO -> Icons.Rounded.PlayCircle
-                        AttachmentType.YOUTUBE -> Icons.Rounded.PlayCircle
-                        AttachmentType.WEB_LINK -> Icons.Rounded.Link
-                        AttachmentType.TEXT -> Icons.Rounded.Article
-                        else -> Icons.Rounded.Description
-                    },
+                    imageVector = attachment.type.icon,
                     contentDescription = null,
                 )
                 Column {
@@ -486,7 +480,7 @@ private fun AudioAttachmentCard(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Rounded.Audiotrack, contentDescription = null)
+                Icon(AttachmentType.AUDIO.icon, contentDescription = null)
                 Column {
                     Text(
                         text = attachment.title,

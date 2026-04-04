@@ -25,13 +25,12 @@ object LinkClassifier {
     }
 
     private val youtubeRegex = Regex(
-        "^.*(youtu.be/|v/|u/\\w/|embed/|watch\\?v=|&v=)([^#&?]*).*",
+        "(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?|shorts|live)/|.*[?&]v=)|youtu\\.be/)([^\"&?/\\s]{11})",
         RegexOption.IGNORE_CASE
     )
 
     fun extractYouTubeId(url: String): String? {
         val matchResult = youtubeRegex.find(url)
-        val id = matchResult?.groupValues?.get(2)
-        return id?.takeIf { it.length == 11 }
+        return matchResult?.groupValues?.get(1)
     }
 }
